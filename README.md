@@ -13,6 +13,10 @@ $ bb pr merge 42 --squash --delete-branch
 $ bb pipeline watch 128
 ```
 
+> **Scope:** `bb` targets **Bitbucket Cloud (bitbucket.org)** only. Bitbucket
+> Data Center / Server has a different REST API and is not supported; the
+> API base, web URLs, and browser allow-list are fixed to bitbucket.org.
+
 ## Installation
 
 ```sh
@@ -78,7 +82,10 @@ bb auth refresh                # force a refresh (normally automatic)
 ```
 
 Access tokens last 2 hours; `bb` refreshes them automatically with the stored
-refresh token. The consumer secret is stored with the credential (hosts.yml or
+refresh token — including in the middle of long-running commands such as
+`bb pipeline watch` — and the git credential helper refreshes too. If a
+refresh fails, a single warning is printed and the refresh is retried every
+30 seconds. The consumer secret is stored with the credential (hosts.yml or
 keyring), never in `config.yml`.
 
 ### Credential storage
@@ -89,8 +96,10 @@ Service on Linux) instead:
 
 ```sh
 bb config set credential_store keyring   # or BB_CREDENTIAL_STORE=keyring
-bb auth login
 ```
+
+Switching the store moves an already stored credential to the new backend,
+so you do not need to log in again.
 
 ### Git over HTTPS
 
@@ -156,7 +165,16 @@ Commands operate on the repository of the current directory's git remote
 - `bb pr reopen` explains that declined pull requests cannot be reopened.
 - `bb pr merge` exposes Bitbucket's six strategies via `--strategy`;
   `--merge`, `--squash`, `--rebase` map to `merge_commit`, `squash`,
-  `rebase_merge`. The default comes from `bb config set merge_strategy`.
+  `rebase_merge`. The default comes from `bb config set merge_strategy`; in
+  interactive mode that default is pre-selected in the strategy prompt.
+- `bb pr decline --delete-branch` never deletes branches in a fork; it prints
+  a warning and exits 0 after declining.
+- `bb pr checks --watch` redraws the table on a TTY and accepts `--timeout`;
+  `bb pipeline watch --exit-status=false` returns 0 even when the pipeline
+  fails.
+- Reviewers (`--reviewer`) are resolved by nickname via a server-side filter
+  when available, with a fallback scan of workspace members; `{uuid}` values
+  are accepted as-is.
 - OAuth login needs your own OAuth consumer (Bitbucket has no device flow and
   no public-client/PKCE support); API tokens are the zero-setup path.
 
@@ -164,11 +182,23 @@ Commands operate on the repository of the current directory's git remote
 
 ```sh
 make build      # bin/bb
-make test
+make test       # unit tests (httptest based; real git is used when installed)
 make lint       # requires golangci-lint
+make docs       # regenerate docs/reference (checked in; CI fails if stale)
 ```
 
-Integration tests against the real API run only with `BB_INTEGRATION=1`.
+Integration tests against the real API run only with `BB_INTEGRATION=1`
+(plus `BB_EMAIL`/`BB_TOKEN`, `BB_INTEGRATION_REPO=WORKSPACE/REPO`). Write
+tests additionally need `BB_INTEGRATION_WRITE=1` with `BB_INTEGRATION_PR`
+and/or `BB_INTEGRATION_COMMIT`; they verify the partial-PUT and
+`pipeline_commit_target` assumptions and whether the workspace members
+endpoint accepts a `q=` filter.
+
+Windows builds are best effort: CI compiles and runs the unit tests on
+Windows but a failure there does not block a release. Manual checks worth
+doing on Windows before relying on `bb` there: `bb auth login` with
+`credential_store=keyring`, `bb auth setup-git` followed by `git fetch`, and
+`bb repo clone` into a path with spaces.
 
 ## License
 

@@ -41,7 +41,6 @@ Work with Bitbucket pull requests.
 * [bb pr list](bb_pr_list.md)	 - List pull requests in a repository
 * [bb pr merge](bb_pr_merge.md)	 - Merge a pull request
 * [bb pr ready](bb_pr_ready.md)	 - Mark a pull request as ready for review
-* [bb pr reopen](bb_pr_reopen.md)	 - Reopen a pull request (not supported by Bitbucket)
 * [bb pr review](bb_pr_review.md)	 - Add a review to a pull request
 * [bb pr status](bb_pr_status.md)	 - Show status of relevant pull requests
 * [bb pr unapprove](bb_pr_unapprove.md)	 - Remove your approval from a pull request

@@ -211,3 +211,6 @@ bb/
 ### MAGI 再審議（2026-08-25、3 回で完了）
 - 第 2 回: MELCHIOR=APPROVE / BALTHASAR=CONDITIONAL（fork PR の `decline --delete-branch` 誤削除）/ CASPER=APPROVE → `b2b7836` で修正（fork 拒否、`pr merge -b/--body`、review 順序、refreshingAuth、checks 再描画/--timeout、log 最終 fetch、秘密マスク、ブラウザ allowlist）
 - 第 3 回: **三体 APPROVE**（確信度 9/9/9）。残警告は UX/保守性の提案のみ（URL リテラル集約、fetchPR の fields、refresh 失敗警告の抑制、fork decline の文言）。
+
+### 改善サイクル（2026-08-25、MAGI 残警告の全件対応）
+グループ 1〜5（UX 11 件、保守性 8 件、テスト 6 件、ドキュメント 2 件）をすべて実施。Data Center は非対応と README に明記（B5）。実 API での検証（C1・A5 の `q=` フィルタ可否）は統合テストとして追加済みだが、API Token とテスト用リポジトリが必要なため未実行。

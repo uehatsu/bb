@@ -20,6 +20,11 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
       - run: go build ./cmd/bb
+      - name: Check generated docs are up to date
+        if: runner.os == 'Linux'
+        run: |
+          go run ./cmd/gendocs docs/reference
+          git diff --exit-code -- docs/reference
 
   lint:
     runs-on: ubuntu-latest
@@ -32,8 +37,8 @@ jobs:
         with:
           version: latest
 
-  build-windows:
-    # best effort: build only
+  windows:
+    # best effort: build and unit tests, does not block
     runs-on: windows-latest
     continue-on-error: true
     steps:
@@ -42,3 +47,4 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go build ./cmd/bb
+      - run: go test ./...
