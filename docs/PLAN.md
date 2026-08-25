@@ -214,3 +214,6 @@ bb/
 
 ### 改善サイクル（2026-08-25、MAGI 残警告の全件対応）
 グループ 1〜5（UX 11 件、保守性 8 件、テスト 6 件、ドキュメント 2 件）をすべて実施。Data Center は非対応と README に明記（B5）。実 API での検証（C1・A5 の `q=` フィルタ可否）は統合テストとして追加済みだが、API Token とテスト用リポジトリが必要なため未実行。
+
+### 実 API 検証結果（2026-08-25、読み取り系）
+`BB_INTEGRATION=1` で統合テストを実行: `/user`・`/user/workspaces`・リポジトリ取得・PR 一覧 PASS。`/workspaces/{ws}/members?q=user.nickname="…"` は**サポートあり**（A5 の高速経路が有効）。`/user/permissions/repositories` は非 2xx（CHANGE-2770 の前提どおり）。書き込み系（部分 PUT、`pipeline_commit_target`）は `BB_INTEGRATION_WRITE=1` での実行待ち。

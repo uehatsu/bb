@@ -287,8 +287,9 @@ const memberFields = "values.user.uuid,values.user.nickname,values.user.display_
 
 // lookupMembers fills found (lowercased nickname/display name -> uuid) for
 // the wanted names. It first tries a server-side q= filter per name, which
-// keeps large workspaces cheap; if the endpoint rejects the filter (400) it
-// falls back to a single scan of all members.
+// keeps large workspaces cheap (verified against the live API on
+// 2026-08-25: the members endpoint accepts q=user.nickname="…"); should the
+// endpoint ever reject the filter (400) it falls back to a single scan.
 func lookupMembers(ctx context.Context, client *api.Client, workspace string, want map[string]bool, found map[string]string) error {
 	path := fmt.Sprintf("/workspaces/%s/members", workspace)
 	record := func(m bitbucket.WorkspaceMembership) {
