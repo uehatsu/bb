@@ -3,11 +3,12 @@ package pr
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/git"
 	"github.com/uehatsu/bb/internal/gitctx"
 )
 
@@ -57,15 +58,21 @@ func runCheckout(f *cmdutil.Factory, selector, localBranch string, force, detach
 	}
 
 	srcBranch := pr.Source.Branch.Name
+	if srcBranch == "" || strings.HasPrefix(srcBranch, "-") {
+		return fmt.Errorf("invalid source branch %q", srcBranch)
+	}
 	remote := "origin"
-	isFork := pr.Source.Repository != nil && pr.Destination.Repository != nil && pr.Source.Repository.FullName != pr.Destination.Repository.FullName
+	isFork := pr.Source.Repository != nil && pr.Source.Repository.FullName != "" && pr.Source.Repository.FullName != repo.FullName()
 	if isFork {
-		remote = pr.Source.Repository.Workspace.Slug
-		if remote == "" {
-			remote = "fork-" + fmt.Sprint(pr.ID)
+		// The PR's source.repository is a short reference without a
+		// workspace object; derive the workspace from full_name.
+		forkRepo, ok := gitctx.ParseRemoteURL("https://bitbucket.org/" + pr.Source.Repository.FullName)
+		if !ok {
+			return fmt.Errorf("unexpected fork repository name %q", pr.Source.Repository.FullName)
 		}
+		remote = forkRepo.Workspace
 		if existing, _ := g.ConfigGet(ctx, "", "remote."+remote+".url"); existing == "" {
-			if _, err := g.Output(ctx, "remote", "add", "--", remote, cloneURL(pr.Source.Repository, protocol)); err != nil {
+			if _, err := g.Output(ctx, "remote", "add", remote, gitctx.CloneURL(forkRepo, protocol)); err != nil {
 				return err
 			}
 		}
@@ -84,37 +91,31 @@ func runCheckout(f *cmdutil.Factory, selector, localBranch string, force, detach
 	if localBranch == "" {
 		localBranch = srcBranch
 	}
-	if _, err := g.Output(ctx, "fetch", "--", remote, "+refs/heads/"+srcBranch+":refs/remotes/"+remote+"/"+srcBranch); err != nil {
+	if strings.HasPrefix(localBranch, "-") {
+		return fmt.Errorf("invalid branch name %q", localBranch)
+	}
+	// Note: these subcommands take a commit-ish, not a pathspec, so "--" must
+	// NOT precede the ref (it would turn the ref into a path argument).
+	trackingRef := remote + "/" + srcBranch
+	if _, err := g.Output(ctx, "fetch", remote, "+refs/heads/"+srcBranch+":refs/remotes/"+trackingRef); err != nil {
 		return err
 	}
 	if detach {
-		return g.Run(ctx, "checkout", "--detach", "--", remote+"/"+srcBranch)
+		return g.Run(ctx, "checkout", "--detach", trackingRef)
 	}
-	if exists, _ := g.ConfigGet(ctx, "", "branch."+localBranch+".merge"); exists != "" || branchExists(ctx, g, localBranch) {
-		if err := g.Run(ctx, "checkout", "--", localBranch); err != nil {
+	if branchExists(ctx, g, localBranch) {
+		if err := g.Run(ctx, "checkout", localBranch); err != nil {
 			return err
 		}
 		if force {
-			return g.Run(ctx, "reset", "--hard", "--", remote+"/"+srcBranch)
+			return g.Run(ctx, "reset", "--hard", trackingRef)
 		}
-		return g.Run(ctx, "merge", "--ff-only", "--", remote+"/"+srcBranch)
+		return g.Run(ctx, "merge", "--ff-only", trackingRef)
 	}
-	if err := g.Run(ctx, "checkout", "-b", localBranch, "--track", "--", remote+"/"+srcBranch); err != nil {
-		return err
-	}
-	return nil
+	return g.Run(ctx, "checkout", "-b", localBranch, "--track", trackingRef)
 }
 
-func branchExists(ctx context.Context, g interface {
-	Output(context.Context, ...string) (string, error)
-}, name string) bool {
+func branchExists(ctx context.Context, g git.Runner, name string) bool {
 	_, err := g.Output(ctx, "rev-parse", "--verify", "--quiet", "refs/heads/"+name)
 	return err == nil
-}
-
-func cloneURL(r *bitbucket.Repository, protocol string) string {
-	if protocol == "ssh" {
-		return fmt.Sprintf("git@%s:%s.git", gitctx.SSHHost, r.FullName)
-	}
-	return "https://bitbucket.org/" + r.FullName + ".git"
 }

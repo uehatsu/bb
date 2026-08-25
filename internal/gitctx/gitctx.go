@@ -126,3 +126,22 @@ func PickRemote(remotes []Remote) (Remote, error) {
 	}
 	return remotes[0], nil
 }
+
+// CloneURL builds a canonical clone URL for repo. SSH URLs use SSHHost.
+func CloneURL(r Repo, protocol string) string {
+	if protocol == "ssh" {
+		return fmt.Sprintf("git@%s:%s/%s.git", SSHHost, r.Workspace, r.Slug)
+	}
+	return fmt.Sprintf("https://bitbucket.org/%s/%s.git", r.Workspace, r.Slug)
+}
+
+// NormalizeCloneURL validates that href points at Bitbucket and rewrites it
+// to the canonical form for protocol (dropping embedded usernames and moving
+// SSH to SSHHost). It returns ok=false for non-Bitbucket URLs.
+func NormalizeCloneURL(href, protocol string) (string, bool) {
+	r, ok := ParseRemoteURL(href)
+	if !ok || !ValidName(r.Workspace) || !ValidName(r.Slug) {
+		return "", false
+	}
+	return CloneURL(r, protocol), true
+}

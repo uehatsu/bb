@@ -26,6 +26,7 @@ type Harness struct {
 	Server  *httptest.Server
 	Mux     *http.ServeMux
 	Prompt  *prompt.Stub
+	Git     *git.Stub
 }
 
 // NewHarness returns a Harness whose API client points at an httptest
@@ -48,7 +49,7 @@ func NewHarness(t *testing.T) *Harness {
 			return api.NewClient(api.NewAuthenticator(config.Credential{Method: config.AuthBearer, Token: "t"}), api.WithBaseURL(srv.URL+"/2.0"), api.WithNoRetry(true)), nil
 		},
 		BaseRepo:  func() (cmdutil.Repo, error) { return cmdutil.Repo{Workspace: "acme", Slug: "widgets"}, nil },
-		GitClient: func() (*git.Client, error) { return nil, errors.New("git not available in tests") },
+		GitClient: func() (git.Runner, error) { return nil, errors.New("git not available in tests") },
 		Prompter:  stub,
 	}
 	return &Harness{Factory: f, Config: cfg, In: in, Out: out, ErrOut: errOut, Server: srv, Mux: mux, Prompt: stub}
@@ -70,6 +71,13 @@ func (h *Harness) JSON(method, path string, status int, body string) {
 // Handle registers an arbitrary handler under /2.0+path.
 func (h *Harness) Handle(path string, fn http.HandlerFunc) {
 	h.Mux.HandleFunc("/2.0"+path, fn)
+}
+
+// UseGit installs a git stub and returns it.
+func (h *Harness) UseGit() *git.Stub {
+	h.Git = git.NewStub()
+	h.Factory.GitClient = func() (git.Runner, error) { return h.Git, nil }
+	return h.Git
 }
 
 // SetTTY marks stdout/stdin as a terminal.

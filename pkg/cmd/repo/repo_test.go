@@ -203,13 +203,37 @@ func TestEditAndFork(t *testing.T) {
 	}
 }
 
+func TestCloneRunsGitAndAddsUpstream(t *testing.T) {
+	h := testutil.NewHarness(t)
+	g := h.UseGit()
+	h.JSON("GET", "/repositories/me/widgets", 200, `{"full_name":"me/widgets","parent":{"full_name":"acme/widgets"},"links":{"clone":[{"name":"https","href":"https://me@bitbucket.org/me/widgets.git"}]}}`)
+	cmd := NewCmdClone(h.Factory)
+	cmd.SetArgs([]string{"me/widgets", "--", "--depth", "1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"git clone --depth 1 -- https://bitbucket.org/me/widgets.git",
+		"cd widgets",
+		"git remote add upstream https://bitbucket.org/acme/widgets.git",
+	}
+	if strings.Join(g.Calls, "\n") != strings.Join(want, "\n") {
+		t.Errorf("git calls:\n%s\nwant:\n%s", strings.Join(g.Calls, "\n"), strings.Join(want, "\n"))
+	}
+}
+
 func TestCloneURLFor(t *testing.T) {
 	var r bitbucket.Repository
 	_ = jsonUnmarshal(repoJSON, &r)
-	if got := cloneURLFor(&r, "https"); got != "https://bitbucket.org/acme/widgets.git" {
+	if got, _ := cloneURLFor(&r, "https"); got != "https://bitbucket.org/acme/widgets.git" {
 		t.Errorf("https: %s", got)
 	}
-	if got := cloneURLFor(&r, "ssh"); got != "git@ssh.bitbucket.org:acme/widgets.git" {
+	if got, _ := cloneURLFor(&r, "ssh"); got != "git@ssh.bitbucket.org:acme/widgets.git" {
 		t.Errorf("ssh must use ssh.bitbucket.org: %s", got)
+	}
+	evil := bitbucket.Repository{FullName: "acme/widgets"}
+	_ = jsonUnmarshal(`{"full_name":"acme/widgets","links":{"clone":[{"name":"https","href":"https://evil.example.com/x.git"}]}}`, &evil)
+	if got, err := cloneURLFor(&evil, "https"); err != nil || got != "https://bitbucket.org/acme/widgets.git" {
+		t.Errorf("foreign clone link must be ignored: %s %v", got, err)
 	}
 }

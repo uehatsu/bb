@@ -4,7 +4,6 @@ package repo
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -60,29 +59,20 @@ func fetchRepo(ctx context.Context, client *api.Client, repo cmdutil.Repo) (*bit
 	return &r, nil
 }
 
-// sshCloneURL rewrites a Bitbucket SSH clone link to the ssh.bitbucket.org host.
-func sshCloneURL(href string) string {
-	href = strings.Replace(href, "git@bitbucket.org:", "git@"+gitctx.SSHHost+":", 1)
-	href = strings.Replace(href, "ssh://git@bitbucket.org/", "ssh://git@"+gitctx.SSHHost+"/", 1)
-	return href
-}
-
-// cloneURLFor picks the clone URL for the configured protocol.
-func cloneURLFor(r *bitbucket.Repository, protocol string) string {
-	if protocol == "ssh" {
-		if u := r.CloneURL("ssh"); u != "" {
-			return sshCloneURL(u)
+// cloneURLFor picks the clone URL for the configured protocol. Server
+// supplied links are validated to point at Bitbucket and normalized
+// (embedded usernames dropped, SSH moved to ssh.bitbucket.org); the
+// repository's full_name is the fallback.
+func cloneURLFor(r *bitbucket.Repository, protocol string) (string, error) {
+	if href := r.CloneURL(protocol); href != "" {
+		if u, ok := gitctx.NormalizeCloneURL(href, protocol); ok {
+			return u, nil
 		}
-		return fmt.Sprintf("git@%s:%s.git", gitctx.SSHHost, r.FullName)
 	}
-	if u := r.CloneURL("https"); u != "" {
-		// strip any embedded username so the credential helper is used
-		if i := strings.Index(u, "@"); i > 0 && strings.HasPrefix(u, "https://") {
-			return "https://" + u[i+1:]
-		}
-		return u
+	if u, ok := gitctx.NormalizeCloneURL("https://bitbucket.org/"+r.FullName, protocol); ok {
+		return u, nil
 	}
-	return "https://bitbucket.org/" + r.FullName + ".git"
+	return "", fmt.Errorf("repository %q has no usable clone URL", r.FullName)
 }
 
 func visibility(r *bitbucket.Repository) string {

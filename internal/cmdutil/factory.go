@@ -31,7 +31,7 @@ type Factory struct {
 	// BaseRepo resolves the target repository from -R, BB_REPO, or git remotes.
 	BaseRepo func() (Repo, error)
 	// GitClient runs git commands.
-	GitClient func() (*git.Client, error)
+	GitClient func() (git.Runner, error)
 	// Prompter asks interactive questions.
 	Prompter prompt.Prompter
 }

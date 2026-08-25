@@ -39,6 +39,9 @@ pointing at the parent repository is added.`,
 			if len(rest) > 0 && !strings.HasPrefix(rest[0], "-") {
 				dir, rest = rest[0], rest[1:]
 			}
+			if len(rest) > 0 && rest[0] == "--" {
+				rest = rest[1:]
+			}
 			gitArgs = rest
 			client, err := f.APIClient()
 			if err != nil {
@@ -60,7 +63,10 @@ func cloneRepo(ctx context.Context, f *cmdutil.Factory, r *bitbucket.Repository,
 	if cfg, err := f.Config(); err == nil {
 		protocol, _ = cfg.Get("git_protocol")
 	}
-	u := cloneURLFor(r, protocol)
+	u, err := cloneURLFor(r, protocol)
+	if err != nil {
+		return err
+	}
 	g, err := f.GitClient()
 	if err != nil {
 		return err
@@ -73,18 +79,17 @@ func cloneRepo(ctx context.Context, f *cmdutil.Factory, r *bitbucket.Repository,
 	if err := g.Run(ctx, args...); err != nil {
 		return err
 	}
-	if r.Parent != nil {
+	if r.Parent != nil && r.Parent.FullName != "" {
 		target := dir
 		if target == "" {
 			target = path.Base(strings.TrimSuffix(u, ".git"))
 		}
-		parentURL := "https://bitbucket.org/" + r.Parent.FullName + ".git"
-		if protocol == "ssh" {
-			parentURL = fmt.Sprintf("git@%s:%s.git", gitctx.SSHHost, r.Parent.FullName)
+		parent, ok := gitctx.ParseRemoteURL("https://bitbucket.org/" + r.Parent.FullName)
+		if !ok {
+			fmt.Fprintf(f.IOStreams.ErrOut, "warning: unexpected parent repository %q; upstream remote not added\n", r.Parent.FullName)
+			return nil
 		}
-		sub := *g
-		sub.Dir = target
-		if _, err := sub.Output(ctx, "remote", "add", "upstream", parentURL); err != nil {
+		if _, err := g.InDir(target).Output(ctx, "remote", "add", "upstream", gitctx.CloneURL(parent, protocol)); err != nil {
 			fmt.Fprintf(f.IOStreams.ErrOut, "warning: could not add upstream remote: %v\n", err)
 		}
 	}
