@@ -33,8 +33,10 @@ failed.`,
 					if err != nil {
 						return false, err
 					}
-					if watch && f.IOStreams.IsStdoutTTY() {
-						fmt.Fprint(f.IOStreams.Out, "\x1b[2J\x1b[H") // redraw in place like gh
+					if watch && f.IOStreams.IsStdoutTTY() && f.IOStreams.IsStderrTTY() {
+						// Redraw in place like gh; the control sequence goes to stderr so
+						// stdout stays clean for machine consumers.
+						fmt.Fprint(f.IOStreams.ErrOut, "\x1b[2J\x1b[H")
 					}
 					pending, failed = printChecks(f, statuses)
 					return pending == 0, nil

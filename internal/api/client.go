@@ -299,7 +299,7 @@ func maskHeader(k, v string) string {
 	return v
 }
 
-var secretJSONKey = regexp.MustCompile(`(?i)("(?:[a-z_]*token|password|secret|client_secret)"\s*:\s*")[^"]*(")`)
+var secretJSONKey = regexp.MustCompile(`(?i)("(?:[a-z_]*token|[a-z_]*secret|[a-z_]*password|(?:api_)?key)"\s*:\s*")(?:[^"\\]|\\.)*(")`)
 
 // MaskSecrets blanks the values of JSON keys that look like credentials
 // (access_token, refresh_token, password, secret, ...).

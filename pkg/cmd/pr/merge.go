@@ -67,6 +67,9 @@ merge task until it completes (see --timeout).`,
 			if opts.Strategy != "" && !mergeStrategies[opts.Strategy] {
 				return cmdutil.FlagErrorf("invalid --strategy %q", opts.Strategy)
 			}
+			if cmd.Flags().Changed("body") && cmd.Flags().Changed("message") {
+				return cmdutil.FlagErrorf("specify only one of --body or --message (deprecated alias)")
+			}
 			return runMerge(cmd.Context(), f, opts)
 		},
 	}
@@ -76,8 +79,9 @@ merge task until it completes (see --timeout).`,
 	cmd.Flags().StringVar(&opts.Strategy, "strategy", "", "Bitbucket merge strategy (see help)")
 	cmd.Flags().BoolVarP(&opts.DeleteBranch, "delete-branch", "d", false, "Delete the source branch after merge")
 	cmd.Flags().StringVarP(&opts.Message, "body", "b", "", "Commit message for the merge commit")
-	cmd.Flags().StringVar(&opts.Message, "message", "", "Alias of --body")
+	cmd.Flags().StringVar(&opts.Message, "message", "", "Deprecated alias of --body")
 	_ = cmd.Flags().MarkHidden("message")
+	_ = cmd.Flags().MarkDeprecated("message", "use --body instead")
 	cmd.Flags().DurationVar(&opts.Timeout, "timeout", 5*time.Minute, "How long to wait for an asynchronous merge")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip the confirmation prompt")
 	return cmd

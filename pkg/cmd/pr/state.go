@@ -37,7 +37,10 @@ func NewCmdDecline(f *cmdutil.Factory) *cobra.Command {
 					// fork PRs is not the base repository; never delete a same-named
 					// branch in the base repo by mistake.
 					if pr.Source.Repository != nil && pr.Source.Repository.FullName != "" && pr.Source.Repository.FullName != repo.FullName() {
-						return fmt.Errorf("declined, but not deleting branch %s: it belongs to fork %s (delete it there with `bb branch delete %s -R %s`)", branch, pr.Source.Repository.FullName, branch, pr.Source.Repository.FullName)
+						cs := f.IOStreams.ColorScheme()
+						fmt.Fprintf(f.IOStreams.ErrOut, "%s Branch %s was not deleted: it belongs to fork %s. Delete it in the fork (e.g. `bb branch delete %s -R %s` if you have write access).\n",
+							cs.WarningIcon(), branch, pr.Source.Repository.FullName, branch, pr.Source.Repository.FullName)
+						return nil
 					}
 					if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: fmt.Sprintf("/repositories/%s/%s/refs/branches/%s", repo.Workspace, repo.Slug, url.PathEscape(branch))}, nil); err != nil {
 						return fmt.Errorf("declined, but could not delete branch %s: %w", branch, err)
@@ -55,8 +58,9 @@ func NewCmdDecline(f *cmdutil.Factory) *cobra.Command {
 // NewCmdReopen exists for gh parity but Bitbucket cannot reopen declined PRs.
 func NewCmdReopen(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
-		Use:   "reopen [<number>]",
-		Short: "Reopen a pull request (not supported by Bitbucket)",
+		Use:    "reopen [<number>]",
+		Short:  "Reopen a pull request (not supported by Bitbucket)",
+		Hidden: true,
 		Long: `Bitbucket Cloud has no API to reopen a declined pull request; this command
 exists only so that GitHub CLI users get an explanation instead of an unknown
 command error. Create a new pull request from the same branch instead.`,

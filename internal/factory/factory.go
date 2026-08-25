@@ -108,17 +108,34 @@ type refreshingAuth struct {
 	cfg    *config.Config
 	cred   config.Credential
 	errOut io.Writer
+	now    func() time.Time
+
+	lastFailure time.Time // when the last refresh attempt failed
+	warned      bool      // whether the failure warning has been printed
 }
+
+// refreshRetryInterval bounds how often a failing refresh is retried so a
+// long-running command does not spam the token endpoint (or the user).
+const refreshRetryInterval = 30 * time.Second
 
 func (a *refreshingAuth) Apply(r *http.Request) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.cred.NeedsRefresh(time.Now()) {
-		fresh, err := config.ResolveFreshCredential(r.Context(), a.cfg.Credentials(), config.DefaultHost, os.Getenv, time.Now())
+	if a.now == nil {
+		a.now = time.Now
+	}
+	now := a.now()
+	if a.cred.NeedsRefresh(now) && now.Sub(a.lastFailure) >= refreshRetryInterval {
+		fresh, err := config.ResolveFreshCredential(r.Context(), a.cfg.Credentials(), config.DefaultHost, os.Getenv, now)
 		if err == nil {
 			a.cred = fresh
+			a.warned = false
 		} else {
-			fmt.Fprintf(a.errOut, "warning: %v\n", err)
+			a.lastFailure = now
+			if !a.warned {
+				fmt.Fprintf(a.errOut, "warning: %v (will retry every %s)\n", err, refreshRetryInterval)
+				a.warned = true
+			}
 		}
 	}
 	api.NewAuthenticator(a.cred).Apply(r)

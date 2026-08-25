@@ -52,7 +52,9 @@ func (o ListOptions) query() url.Values {
 	for k, vs := range o.Extra {
 		q[k] = append([]string(nil), vs...)
 	}
-	q.Set("pagelen", strconv.Itoa(o.pageLen()))
+	if q.Get("pagelen") == "" {
+		q.Set("pagelen", strconv.Itoa(o.pageLen()))
+	}
 	if o.Fields != "" {
 		q.Set("fields", o.Fields)
 	}

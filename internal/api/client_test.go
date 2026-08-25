@@ -266,9 +266,9 @@ func TestResolvePreservesEscapes(t *testing.T) {
 }
 
 func TestMaskSecrets(t *testing.T) {
-	in := `{"access_token":"abc","refresh_token":"def","scopes":"x","user":{"password":"p"},"n":1}`
+	in := `{"access_token":"abc","refresh_token":"def","scopes":"x","user":{"password":"p"},"api_key":"k1","key":"k\"2","n":1}`
 	got := MaskSecrets(in)
-	for _, bad := range []string{`"abc"`, `"def"`, `"p"`} {
+	for _, bad := range []string{`"abc"`, `"def"`, `"p"`, `"k1"`, `k\"2`} {
 		if strings.Contains(got, bad) {
 			t.Errorf("leaked %s in %s", bad, got)
 		}

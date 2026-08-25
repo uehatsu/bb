@@ -160,3 +160,20 @@ func TestRepoOverrideFlag(t *testing.T) {
 		t.Errorf("BB_REPO not honored: %s", path)
 	}
 }
+
+func TestAPIPaginateRespectsPathQuery(t *testing.T) {
+	var got *http.Request
+	f, _, _, _, _ := newFactory(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r
+		w.Write([]byte(`{"values":[]}`))
+	}))
+	cmd := NewCmdAPI(f)
+	cmd.SetArgs([]string{"repositories/acme/widgets/pullrequests?pagelen=100&state=MERGED", "--paginate", "-H", "X-Test: 1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	q := got.URL.Query()
+	if q.Get("pagelen") != "100" || q.Get("state") != "MERGED" || len(q["pagelen"]) != 1 || got.Header.Get("X-Test") != "1" {
+		t.Errorf("query=%v header=%q", q, got.Header.Get("X-Test"))
+	}
+}

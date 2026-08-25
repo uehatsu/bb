@@ -51,13 +51,15 @@ func runCheckout(ctx context.Context, f *cmdutil.Factory, selector, localBranch 
 	if err != nil {
 		return err
 	}
+	// An unreadable config is reported by other commands; here fall back to
+	// https silently so checkout still works.
 	protocol := "https"
 	if cfg, err := f.Config(); err == nil {
 		protocol, _ = cfg.Get("git_protocol")
 	}
 
 	srcBranch := pr.Source.Branch.Name
-	if srcBranch == "" || strings.HasPrefix(srcBranch, "-") {
+	if srcBranch == "" || strings.HasPrefix(srcBranch, "-") || strings.ContainsAny(srcBranch, ":*?[\\ ~^") {
 		return fmt.Errorf("invalid source branch %q", srcBranch)
 	}
 	remote := "origin"
@@ -70,8 +72,18 @@ func runCheckout(ctx context.Context, f *cmdutil.Factory, selector, localBranch 
 			return fmt.Errorf("unexpected fork repository name %q", pr.Source.Repository.FullName)
 		}
 		remote = forkRepo.Workspace
-		if existing, _ := g.ConfigGet(ctx, "", "remote."+remote+".url"); existing == "" {
-			if _, err := g.Output(ctx, "remote", "add", remote, gitctx.CloneURL(forkRepo, protocol)); err != nil {
+		forkURL := gitctx.CloneURL(forkRepo, protocol)
+		existing, _ := g.ConfigGet(ctx, "", "remote."+remote+".url")
+		if existing != "" {
+			// A remote with the workspace name already exists; only reuse it
+			// when it really points at the fork, otherwise pick a distinct name.
+			if parsed, ok := gitctx.ParseRemoteURL(existing); !ok || parsed != forkRepo {
+				remote = "fork-" + forkRepo.Workspace
+				existing, _ = g.ConfigGet(ctx, "", "remote."+remote+".url")
+			}
+		}
+		if existing == "" {
+			if _, err := g.Output(ctx, "remote", "add", remote, forkURL); err != nil {
 				return err
 			}
 		}

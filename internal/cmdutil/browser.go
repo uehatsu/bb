@@ -29,5 +29,6 @@ func OpenBrowser(f *Factory, u string) error {
 }
 
 func isBitbucketWebHost(h string) bool {
+	h = strings.ToLower(h)
 	return h == "bitbucket.org" || strings.HasSuffix(h, ".bitbucket.org")
 }

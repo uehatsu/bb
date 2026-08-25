@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -32,7 +33,7 @@ app passwords are bypassed for this host.`,
 			if exe == "" {
 				exe = "bb"
 			}
-			helper := fmt.Sprintf("!%q auth git-credential", exe)
+			helper := "!" + shellQuote(exe) + " auth git-credential"
 			existing, err := g.ConfigGet(ctx, "--global", credentialKey)
 			if err != nil {
 				return err
@@ -56,4 +57,10 @@ app passwords are bypassed for this host.`,
 	}
 	cmd.Flags().BoolVar(&force, "force", false, "Overwrite an existing helper configuration")
 	return cmd
+}
+
+// shellQuote wraps s in single quotes for the sh -c invocation git uses for
+// "!" helpers, so characters like $ and backticks are never expanded.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }

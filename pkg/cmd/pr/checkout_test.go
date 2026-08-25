@@ -62,6 +62,25 @@ func TestCheckoutExistingForceAndDetach(t *testing.T) {
 	}
 }
 
+func TestCheckoutForkRemoteNameCollision(t *testing.T) {
+	h := testutil.NewHarness(t)
+	g := h.UseGit()
+	g.Errors["rev-parse --verify --quiet refs/heads/feat/login"] = errors.New("missing")
+	// "alice" remote already exists but points elsewhere
+	g.Outputs["config --get remote.alice.url"] = "https://bitbucket.org/alice/other.git"
+	fork := strings.Replace(prJSON, `"repository":{"full_name":"acme/widgets","workspace":{"slug":"acme"}}`, `"repository":{"full_name":"alice/widgets-fork"}`, 1)
+	h.JSON("GET", "/repositories/acme/widgets/pullrequests/42", 200, fork)
+	cmd := NewCmdCheckout(h.Factory)
+	cmd.SetArgs([]string{"42"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(g.Calls, "\n")
+	if !strings.Contains(joined, "git remote add fork-alice https://bitbucket.org/alice/widgets-fork.git") || !strings.Contains(joined, "--track fork-alice/feat/login") {
+		t.Errorf("expected distinct remote name:\n%s", joined)
+	}
+}
+
 func TestCheckoutFork(t *testing.T) {
 	h := testutil.NewHarness(t)
 	g := h.UseGit()

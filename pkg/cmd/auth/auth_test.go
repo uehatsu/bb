@@ -235,3 +235,12 @@ func TestGitCredentialRefreshesOAuth(t *testing.T) {
 		t.Error("refreshed token not persisted")
 	}
 }
+
+func TestShellQuote(t *testing.T) {
+	if got := shellQuote("/Applications/bb $HOME `x`/bb"); got != `'/Applications/bb $HOME `+"`x`"+`/bb'` {
+		t.Errorf("shellQuote: %s", got)
+	}
+	if got := shellQuote("/it's/bb"); got != `'/it'\''s/bb'` {
+		t.Errorf("shellQuote apostrophe: %s", got)
+	}
+}

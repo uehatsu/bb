@@ -373,8 +373,8 @@ func TestDeclineDeleteBranchRefusesFork(t *testing.T) {
 	d := NewCmdDecline(h.Factory)
 	d.SetArgs([]string{"42", "--delete-branch"})
 	err := d.Execute()
-	if err == nil || !strings.Contains(err.Error(), "alice/widgets-fork") || deleted {
-		t.Errorf("fork branch must not be deleted from base repo: err=%v deleted=%v", err, deleted)
+	if err != nil || deleted || !strings.Contains(h.ErrOut.String(), "alice/widgets-fork") {
+		t.Errorf("fork branch must not be deleted from base repo, decline still succeeds: err=%v deleted=%v stderr=%s", err, deleted, h.ErrOut.String())
 	}
 }
 

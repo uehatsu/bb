@@ -69,25 +69,31 @@ func (s *Stub) CurrentBranch(context.Context) (string, error) {
 func (s *Stub) ConfigGet(_ context.Context, scope, key string) (string, error) {
 	k := joinNonEmpty("config", scope, "--get", key)
 	s.Calls = append(s.Calls, "git "+k)
+	if err, ok := s.Errors[k]; ok {
+		return "", err
+	}
 	return s.Outputs[k], nil
 }
 
 // ConfigSet implements Runner.
 func (s *Stub) ConfigSet(_ context.Context, scope, key, value string) error {
-	s.Calls = append(s.Calls, joinNonEmpty("git config", scope, "--replace-all", key, value))
-	return nil
+	k := joinNonEmpty("config", scope, "--replace-all", key, value)
+	s.Calls = append(s.Calls, "git "+k)
+	return s.Errors[k]
 }
 
 // ConfigAdd implements Runner.
 func (s *Stub) ConfigAdd(_ context.Context, scope, key, value string) error {
-	s.Calls = append(s.Calls, joinNonEmpty("git config", scope, "--add", key, value))
-	return nil
+	k := joinNonEmpty("config", scope, "--add", key, value)
+	s.Calls = append(s.Calls, "git "+k)
+	return s.Errors[k]
 }
 
 // ConfigUnsetAll implements Runner.
 func (s *Stub) ConfigUnsetAll(_ context.Context, scope, key string) error {
-	s.Calls = append(s.Calls, joinNonEmpty("git config", scope, "--unset-all", key))
-	return nil
+	k := joinNonEmpty("config", scope, "--unset-all", key)
+	s.Calls = append(s.Calls, "git "+k)
+	return s.Errors[k]
 }
 
 // InDir implements Runner (records the directory switch, shares state).

@@ -148,8 +148,18 @@ func run(ctx context.Context, f *cmdutil.Factory, opts *Options) error {
 	}
 
 	if opts.Paginate {
+		// Query parameters embedded in the path (e.g. ?pagelen=100) take
+		// precedence over the defaults Paginate would add.
+		extra := url.Values{}
+		if u, err := client.Resolve(path); err == nil {
+			extra = u.Query()
+			path = strings.TrimSuffix(path[:len(path)-len(u.RawQuery)], "?")
+		}
+		for k, vs := range req.Query {
+			extra[k] = vs
+		}
 		var all []json.RawMessage
-		err := bbapi.Paginate(ctx, client, path, bbapi.ListOptions{Extra: req.Query, Headers: headers}, func(v json.RawMessage) error {
+		err := bbapi.Paginate(ctx, client, path, bbapi.ListOptions{Extra: extra, Headers: headers}, func(v json.RawMessage) error {
 			all = append(all, v)
 			return nil
 		})
