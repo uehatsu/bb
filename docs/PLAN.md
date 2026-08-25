@@ -198,3 +198,8 @@ bb/
 - `internal/bitbucket` の `--json` フィールドマップは「キーが struct に実在するか」を検証するテーブルテストを持つ。
 - Step 8 はコミット単位を 8a(list/view/create/checkout) / 8b(merge/decline/approve/review/comment) / 8c(残り+リリース) に分割。
 - nightly 失敗時は main をブロックせず issue 起票（運用）。
+
+## 9. 進捗（2026-08-25）
+- Step 0〜11 実装済み（v0.1 + v0.2 相当）。全コマンドに httptest ベースのユニットテストあり、golangci-lint 0 件。
+- 未着手: Step 12（OAuth 2.0 `--web` ログイン、OS keyring バックエンド）。`CredentialStore` / `Authenticator` の抽象は用意済み。
+- 実 API に対する smoke（`bb auth login` → `pr create` → `merge`）は API Token を用意した上で手動確認が必要。

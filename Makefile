@@ -2,7 +2,7 @@ BIN     := bin/bb
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/uehatsu/bb/internal/build.Version=$(VERSION)
 
-.PHONY: build test lint vet fmt clean
+.PHONY: build test lint vet fmt clean docs
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/bb
@@ -21,3 +21,6 @@ lint:
 
 clean:
 	rm -rf bin dist
+
+docs:
+	go run ./cmd/gendocs docs/reference
