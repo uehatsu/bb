@@ -1,5 +1,7 @@
 # bb — Bitbucket Cloud CLI
 
+English | [日本語](README_JA.md)
+
 `bb` brings the ergonomics of [GitHub CLI](https://cli.github.com/) to
 [Bitbucket Cloud](https://bitbucket.org). Written in Go, single binary,
 scriptable with `--json`/`--jq`/`--template`.
