@@ -89,8 +89,17 @@ func (c *Client) Resolve(p string) (*url.URL, error) {
 	}
 	p = strings.TrimPrefix(p, "/")
 	p = strings.TrimPrefix(p, "2.0/")
+	unescaped, err := url.PathUnescape(p)
+	if err != nil {
+		return nil, fmt.Errorf("invalid path %q: %w", p, err)
+	}
 	u := *c.BaseURL
-	u.Path = strings.TrimSuffix(u.Path, "/") + "/" + p
+	base := strings.TrimSuffix(u.Path, "/")
+	u.Path = base + "/" + unescaped
+	if unescaped != p {
+		// preserve caller-provided escapes such as %2F in branch names
+		u.RawPath = base + "/" + p
+	}
 	return &u, nil
 }
 

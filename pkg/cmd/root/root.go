@@ -8,7 +8,9 @@ import (
 	"github.com/uehatsu/bb/internal/cmdutil"
 	apiCmd "github.com/uehatsu/bb/pkg/cmd/api"
 	authCmd "github.com/uehatsu/bb/pkg/cmd/auth"
+	branchCmd "github.com/uehatsu/bb/pkg/cmd/branch"
 	browseCmd "github.com/uehatsu/bb/pkg/cmd/browse"
+	pipelineCmd "github.com/uehatsu/bb/pkg/cmd/pipeline"
 	prCmd "github.com/uehatsu/bb/pkg/cmd/pr"
 	repoCmd "github.com/uehatsu/bb/pkg/cmd/repo"
 	versionCmd "github.com/uehatsu/bb/pkg/cmd/version"
@@ -38,6 +40,8 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 		browseCmd.NewCmdBrowse(f),
 		repoCmd.NewCmdRepo(f),
 		prCmd.NewCmdPR(f),
+		pipelineCmd.NewCmdPipeline(f),
+		branchCmd.NewCmdBranch(f),
 		versionCmd.NewCmdVersion(f),
 	)
 

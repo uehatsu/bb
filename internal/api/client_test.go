@@ -249,3 +249,18 @@ func TestLogMasksSecrets(t *testing.T) {
 		t.Errorf("authorization not masked:\n%s", s)
 	}
 }
+
+func TestResolvePreservesEscapes(t *testing.T) {
+	c := NewClient(nil)
+	u, err := c.Resolve("/repositories/ws/r/refs/branches/feat%2Fx")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.String() != "https://api.bitbucket.org/2.0/repositories/ws/r/refs/branches/feat%2Fx" {
+		t.Errorf("got %s", u.String())
+	}
+	u, _ = c.Resolve("/repositories/ws/r/pipelines/{abc}")
+	if u.String() != "https://api.bitbucket.org/2.0/repositories/ws/r/pipelines/%7Babc%7D" {
+		t.Errorf("uuid braces: %s", u.String())
+	}
+}
