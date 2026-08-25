@@ -21,6 +21,9 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	// Help texts embed the config directory; pin it so generated docs do not
+	// depend on the machine that produced them.
+	_ = os.Setenv("BB_CONFIG_DIR", "$XDG_CONFIG_HOME/bb")
 	f := &cmdutil.Factory{IOStreams: iostreams.System()}
 	cmd := root.NewCmdRoot(f)
 	cmd.DisableAutoGenTag = true

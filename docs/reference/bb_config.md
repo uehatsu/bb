@@ -6,7 +6,7 @@ Manage configuration for bb
 
 Display or change configuration settings for bb.
 
-Configuration is stored in /Users/ueno/.config/bb/config.yml.
+Configuration is stored in $XDG_CONFIG_HOME/bb/config.yml.
 
 Keys:
   workspace       default workspace for repository names without a workspace

@@ -13,7 +13,7 @@ scopes bb needs (see 'bb auth login --help' output below). Copy the token; it is
 shown only once.
 
 By default the token is read interactively together with your Atlassian
-account email. The token is stored in /Users/ueno/.config/bb/hosts.yml (mode 0600).
+account email. The token is stored in $XDG_CONFIG_HOME/bb/hosts.yml (mode 0600).
 
 Use --with-token to read the token from standard input, e.g.
   echo "you@example.com:ATATT3x..." | bb auth login --with-token
