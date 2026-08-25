@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 
@@ -68,14 +69,25 @@ func InstantPolling(t *testing.T) {
 	t.Cleanup(func() { api.PollSleep = orig })
 }
 
+// NoopBrowser returns a BROWSER command that accepts a URL and does nothing.
+func NoopBrowser() string {
+	if runtime.GOOS == "windows" {
+		return "cmd /c exit 0"
+	}
+	return "true"
+}
+
 // IsolateEnv clears every bb-related environment variable so tests never
 // touch the developer's real credentials, keyring, or browser.
 func IsolateEnv(t *testing.T) {
 	t.Helper()
-	for _, k := range []string{"BB_TOKEN", "BB_EMAIL", "BB_AUTH_METHOD", "BB_CREDENTIAL_STORE", "BB_REPO", "BB_WORKSPACE", "BB_CONFIG_DIR", "BB_OAUTH_CLIENT_ID", "BB_OAUTH_CLIENT_SECRET", "BB_DEBUG", "BB_NO_RETRY", "BB_PAGER", "PAGER", "BROWSER"} {
+	for _, k := range []string{"BB_TOKEN", "BB_EMAIL", "BB_AUTH_METHOD", "BB_CREDENTIAL_STORE", "BB_REPO", "BB_WORKSPACE", "BB_CONFIG_DIR", "BB_OAUTH_CLIENT_ID", "BB_OAUTH_CLIENT_SECRET", "BB_DEBUG", "BB_NO_RETRY", "BB_PAGER", "PAGER"} {
 		t.Setenv(k, "")
 	}
 	t.Setenv("BB_CONFIG_DIR", t.TempDir())
+	// Never launch a real browser from tests: point BROWSER at a command that
+	// succeeds without doing anything.
+	t.Setenv("BROWSER", NoopBrowser())
 }
 
 // JSON registers a handler returning body for method+path.

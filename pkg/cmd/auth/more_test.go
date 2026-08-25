@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/uehatsu/bb/internal/testutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -91,7 +92,7 @@ func TestLoginWebInteractiveAndReuse(t *testing.T) {
 	f, cfg, _, _, _ := testFactory(t, userHandler(t, "Bearer "))
 	f.IOStreams.SetStdinTTY(true)
 	f.IOStreams.SetStdoutTTY(true)
-	t.Setenv("BROWSER", "true")
+	t.Setenv("BROWSER", testutil.NoopBrowser())
 	exp := time.Now().Add(2 * time.Hour)
 	authorize := func(ctx context.Context, c oauth.Config, open func(string) error) (*oauth.Token, error) {
 		_ = open("https://bitbucket.org/site/oauth2/authorize?x")

@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/uehatsu/bb/internal/config"
@@ -8,7 +9,11 @@ import (
 )
 
 func TestOpenBrowserAllowlist(t *testing.T) {
-	t.Setenv("BROWSER", "true") // /usr/bin/true: succeeds without opening anything
+	noop := "true"
+	if runtime.GOOS == "windows" {
+		noop = "cmd /c exit 0"
+	}
+	t.Setenv("BROWSER", noop) // never launch a real browser from tests // /usr/bin/true: succeeds without opening anything
 	ios, _, _, errOut := iostreams.Test()
 	ios.SetStdoutTTY(true)
 	cfg, _ := config.LoadFrom(t.TempDir())

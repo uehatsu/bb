@@ -171,7 +171,7 @@ func TestCreateFill(t *testing.T) {
 
 func TestCreateWebURL(t *testing.T) {
 	h := testutil.NewHarness(t)
-	t.Setenv("BROWSER", "echo")
+	t.Setenv("BROWSER", testutil.NoopBrowser())
 	cmd := NewCmdCreate(h.Factory)
 	cmd.SetArgs([]string{"--web", "--head", "feat/x", "--base", "develop", "--title", "Hi there"})
 	if err := cmd.Execute(); err != nil {
