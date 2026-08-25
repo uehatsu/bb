@@ -14,7 +14,6 @@ import (
 	"github.com/uehatsu/bb/internal/config"
 	"github.com/uehatsu/bb/internal/git"
 	"github.com/uehatsu/bb/internal/iostreams"
-	"github.com/uehatsu/bb/internal/oauth"
 	"github.com/uehatsu/bb/internal/prompt"
 )
 
@@ -57,29 +56,18 @@ func apiClientFunc(f *cmdutil.Factory) func() (*api.Client, error) {
 				err = cerr
 				return
 			}
-			cred, rerr := config.ResolveCredential(cfg.Credentials(), config.DefaultHost, os.Getenv)
-			if errors.Is(rerr, config.ErrNotFound) {
+			cred, rerr := config.ResolveFreshCredential(context.Background(), cfg.Credentials(), config.DefaultHost, os.Getenv, time.Now())
+			var refreshErr *config.ErrRefreshFailed
+			switch {
+			case errors.Is(rerr, config.ErrNotFound):
 				err = cmdutil.NewAuthError("not logged in to bitbucket.org")
 				return
-			}
-			if rerr != nil {
-				err = rerr
+			case errors.As(rerr, &refreshErr):
+				err = &cmdutil.AuthError{Msg: rerr.Error()}
 				return
-			}
-			if cred.NeedsRefresh(time.Now()) {
-				tok, terr := oauth.Refresh(context.Background(), oauth.Config{ClientID: cred.ClientID, ClientSecret: cred.ClientSecret}, cred.RefreshToken)
-				if terr != nil {
-					err = cmdutil.NewAuthError("OAuth token expired and refresh failed: " + terr.Error())
-					return
-				}
-				cred.Token = tok.AccessToken
-				if tok.RefreshToken != "" {
-					cred.RefreshToken = tok.RefreshToken
-				}
-				cred.ExpiresAt = &tok.ExpiresAt
-				if serr := cfg.Credentials().Set(config.DefaultHost, cred); serr != nil {
-					fmt.Fprintf(f.IOStreams.ErrOut, "warning: could not persist refreshed token: %v\n", serr)
-				}
+			case rerr != nil:
+				// token refreshed but not persisted: usable for this run
+				fmt.Fprintf(f.IOStreams.ErrOut, "warning: %v\n", rerr)
 			}
 			var opts []api.Option
 			switch os.Getenv("BB_DEBUG") {

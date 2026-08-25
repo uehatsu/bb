@@ -152,3 +152,18 @@ func TestStopAndLog(t *testing.T) {
 		t.Errorf("first fetch must not send Range: %v", ranges)
 	}
 }
+
+func TestWatchExitStatusFlag(t *testing.T) {
+	h := testutil.NewHarness(t)
+	h.JSON("GET", "/repositories/acme/widgets/pipelines/{p1}", 200, doneJSON("FAILED"))
+	w := NewCmdWatch(h.Factory)
+	w.SetArgs([]string{"{p1}"})
+	if err := w.Execute(); !errors.Is(err, cmdutil.ErrSilent) {
+		t.Errorf("default should fail on FAILED: %v", err)
+	}
+	w = NewCmdWatch(h.Factory)
+	w.SetArgs([]string{"{p1}", "--exit-status=false"})
+	if err := w.Execute(); err != nil {
+		t.Errorf("--exit-status=false should succeed: %v", err)
+	}
+}

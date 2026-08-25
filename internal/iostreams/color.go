@@ -9,6 +9,9 @@ type ColorScheme struct{ enabled bool }
 // ColorScheme returns a scheme bound to this stream's color setting.
 func (s *IOStreams) ColorScheme() *ColorScheme { return &ColorScheme{enabled: s.colorOn} }
 
+// NewColorScheme returns a scheme with colors forced on or off.
+func NewColorScheme(enabled bool) *ColorScheme { return &ColorScheme{enabled: enabled} }
+
 func (c *ColorScheme) wrap(code string, s string) string {
 	if !c.enabled {
 		return s

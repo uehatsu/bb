@@ -10,7 +10,6 @@ import (
 
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/config"
-	"github.com/uehatsu/bb/internal/oauth"
 )
 
 // NewCmdRefresh forces an OAuth access token refresh.
@@ -49,14 +48,9 @@ func NewCmdRefresh(f *cmdutil.Factory) *cobra.Command {
 
 // RefreshCredential exchanges the refresh token for a new access token.
 func RefreshCredential(ctx context.Context, cred config.Credential) (config.Credential, error) {
-	tok, err := oauth.Refresh(ctx, oauth.Config{ClientID: cred.ClientID, ClientSecret: cred.ClientSecret}, cred.RefreshToken)
+	fresh, err := config.RefreshOAuth(ctx, cred)
 	if err != nil {
 		return cred, fmt.Errorf("refreshing OAuth token: %w (run `bb auth login --web` to re-authenticate)", err)
 	}
-	cred.Token = tok.AccessToken
-	if tok.RefreshToken != "" {
-		cred.RefreshToken = tok.RefreshToken
-	}
-	cred.ExpiresAt = &tok.ExpiresAt
-	return cred, nil
+	return fresh, nil
 }

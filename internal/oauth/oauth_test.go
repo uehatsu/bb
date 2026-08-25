@@ -73,23 +73,32 @@ func TestAuthorizeHappyPath(t *testing.T) {
 	}
 }
 
-func TestAuthorizeRejectsBadState(t *testing.T) {
+func TestAuthorizeIgnoresBadStateAndKeepsWaiting(t *testing.T) {
 	ts := tokenServer(t, "authorization_code")
 	defer ts.Close()
 	port := freePort(t)
 	cfg := Config{ClientID: "cid", ClientSecret: "csecret", TokenURL: ts.URL, Port: port, Timeout: 5 * time.Second}
 	open := func(u string) error {
 		go func() {
-			resp, err := http.Get(cfg.CallbackURL() + "?code=the-code&state=wrong")
+			// forged request first: must be answered 400 and ignored
+			resp, err := http.Get(cfg.CallbackURL() + "?code=evil&state=wrong")
+			if err == nil {
+				if resp.StatusCode != 400 {
+					t.Errorf("forged callback status %d", resp.StatusCode)
+				}
+				resp.Body.Close()
+			}
+			// then the genuine one
+			resp, err = http.Get(cfg.CallbackURL() + "?code=the-code&state=" + mustState(u))
 			if err == nil {
 				resp.Body.Close()
 			}
 		}()
 		return nil
 	}
-	_, err := Authorize(context.Background(), cfg, open)
-	if err == nil || !strings.Contains(err.Error(), "state mismatch") {
-		t.Fatalf("expected state mismatch, got %v", err)
+	tok, err := Authorize(context.Background(), cfg, open)
+	if err != nil || tok.AccessToken != "AT" {
+		t.Fatalf("expected success after ignoring forged callback, got %v %+v", err, tok)
 	}
 }
 

@@ -11,22 +11,30 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/iostreams"
 )
 
 // NewCmdDiff returns `pr diff`.
 func NewCmdDiff(f *cmdutil.Factory) *cobra.Command {
-	var nameOnly, stat, color bool
+	var nameOnly, stat bool
+	var color string
 	cmd := &cobra.Command{
 		Use:   "diff [<number> | <branch> | <url>]",
 		Short: "View changes in a pull request",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			switch color {
+			case "always", "never", "auto":
+			default:
+				return cmdutil.FlagErrorf("invalid --color %q (always|never|auto)", color)
+			}
 			sel := ""
 			if len(args) > 0 {
 				sel = args[0]
 			}
 			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
 				ios := f.IOStreams
+				useColor := color == "always" || (color == "auto" && ios.ColorEnabled())
 				if nameOnly || stat {
 					var entries []bitbucket.DiffStat
 					if err := api.Paginate(ctx, c, prPath(repo, prID, "diffstat"), api.ListOptions{}, func(d bitbucket.DiffStat) error {
@@ -53,8 +61,8 @@ func NewCmdDiff(f *cmdutil.Factory) *cobra.Command {
 				if err := ios.StartPager(); err == nil {
 					defer ios.StopPager()
 				}
-				if color || (ios.ColorEnabled() && cmd.Flags().Lookup("color").Value.String() != "false") {
-					return colorizeDiff(resp.Body, ios.Out, ios.ColorScheme())
+				if useColor {
+					return colorizeDiff(resp.Body, ios.Out, iostreams.NewColorScheme(true))
 				}
 				_, err = io.Copy(ios.Out, resp.Body)
 				return err
@@ -63,16 +71,11 @@ func NewCmdDiff(f *cmdutil.Factory) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&nameOnly, "name-only", false, "Output only names of changed files")
 	cmd.Flags().BoolVar(&stat, "stat", false, "Output a diffstat summary")
-	cmd.Flags().BoolVar(&color, "color", false, "Force colored diff output")
+	cmd.Flags().StringVar(&color, "color", "auto", "Use color in diff output: {always|never|auto}")
 	return cmd
 }
 
-func colorizeDiff(r io.Reader, w io.Writer, cs interface {
-	Green(string) string
-	Red(string) string
-	Cyan(string) string
-	Bold(string) string
-}) error {
+func colorizeDiff(r io.Reader, w io.Writer, cs *iostreams.ColorScheme) error {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return err

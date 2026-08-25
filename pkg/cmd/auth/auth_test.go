@@ -2,6 +2,7 @@ package auth
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -205,4 +206,30 @@ func TestGitCredentialHelper(t *testing.T) {
 func getenvTestServer(t *testing.T) string {
 	t.Helper()
 	return mustEnv(t, "BB_TEST_SERVER")
+}
+
+func TestGitCredentialRefreshesOAuth(t *testing.T) {
+	f, cfg, in, out, _ := testFactory(t, nil)
+	past := time.Now().Add(-time.Minute)
+	_ = cfg.Credentials().Set(config.DefaultHost, config.Credential{Method: config.AuthOAuth, Token: "stale", RefreshToken: "RT", ClientID: "c", ClientSecret: "s", ExpiresAt: &past})
+	orig := config.RefreshOAuth
+	defer func() { config.RefreshOAuth = orig }()
+	config.RefreshOAuth = func(ctx context.Context, c config.Credential) (config.Credential, error) {
+		future := time.Now().Add(2 * time.Hour)
+		c.Token, c.ExpiresAt = "fresh", &future
+		return c, nil
+	}
+	in.WriteString("protocol=https\nhost=bitbucket.org\n\n")
+	cmd := NewCmdGitCredential(f)
+	cmd.SetArgs([]string{"get"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "username=x-token-auth\npassword=fresh\n") {
+		t.Errorf("helper must return refreshed token: %q", out.String())
+	}
+	stored, _ := cfg.Credentials().Get(config.DefaultHost)
+	if stored.Token != "fresh" {
+		t.Error("refreshed token not persisted")
+	}
 }

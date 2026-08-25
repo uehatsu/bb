@@ -341,3 +341,24 @@ func TestStatus(t *testing.T) {
 		t.Errorf("status:\n%s", out)
 	}
 }
+
+func TestDiffColorFlag(t *testing.T) {
+	h := testutil.NewHarness(t)
+	h.JSON("GET", "/repositories/acme/widgets/pullrequests/42", 200, prJSON)
+	h.Handle("/repositories/acme/widgets/pullrequests/42/diff", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("+new\n"))
+	})
+	d := NewCmdDiff(h.Factory)
+	d.SetArgs([]string{"42", "--color", "always"})
+	if err := d.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(h.Out.String(), "\x1b[32m+new") {
+		t.Errorf("expected colored output: %q", h.Out.String())
+	}
+	d = NewCmdDiff(h.Factory)
+	d.SetArgs([]string{"42", "--color", "sometimes"})
+	if err := d.Execute(); err == nil {
+		t.Error("expected invalid --color error")
+	}
+}

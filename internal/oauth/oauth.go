@@ -111,11 +111,9 @@ func Authorize(ctx context.Context, cfg Config, openURL func(string) error) (*To
 	mux.HandleFunc(CallbackPath, func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		if subtle.ConstantTimeCompare([]byte(q.Get("state")), []byte(state)) != 1 {
-			http.Error(w, "state mismatch; please retry `bb auth login --web`", http.StatusBadRequest)
-			select {
-			case results <- result{err: errors.New("state mismatch in OAuth callback")}:
-			default:
-			}
+			// Ignore stray or forged requests: keep waiting for the genuine
+			// callback instead of letting any local page abort the login.
+			http.Error(w, "state mismatch; this request was ignored", http.StatusBadRequest)
 			return
 		}
 		if e := q.Get("error"); e != "" {

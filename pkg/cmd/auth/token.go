@@ -2,8 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -24,9 +26,12 @@ func NewCmdToken(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			cred, err := config.ResolveCredential(cfg.Credentials(), config.DefaultHost, os.Getenv)
-			if err != nil {
+			cred, err := config.ResolveFreshCredential(cmd.Context(), cfg.Credentials(), config.DefaultHost, os.Getenv, time.Now())
+			if errors.Is(err, config.ErrNotFound) {
 				return cmdutil.NewAuthError("no token found")
+			}
+			if err != nil {
+				return err
 			}
 			if f.IOStreams.IsStdoutTTY() {
 				fmt.Fprintf(f.IOStreams.ErrOut, "%s Printing a secret to the terminal.\n", f.IOStreams.ColorScheme().WarningIcon())

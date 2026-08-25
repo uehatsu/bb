@@ -412,7 +412,7 @@ bitbucket-pipelines.yml, and --var KEY=VALUE to pass pipeline variables.`,
 			}
 			fmt.Fprintln(f.IOStreams.Out, u)
 			if watch {
-				return watchPipeline(ctx, f, client, repo, created.UUID, 0, 0)
+				return watchPipeline(ctx, f, client, repo, created.UUID, 0, 0, true)
 			}
 			return nil
 		},
@@ -482,17 +482,18 @@ func NewCmdWatch(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			_ = exitStatus
-			return watchPipeline(ctx, f, client, repo, p.UUID, interval, timeout)
+			return watchPipeline(ctx, f, client, repo, p.UUID, interval, timeout, exitStatus)
 		},
 	}
 	cmd.Flags().DurationVarP(&interval, "interval", "i", 0, "Initial polling interval (default 3s, grows to 30s)")
 	cmd.Flags().DurationVar(&timeout, "timeout", 2*time.Hour, "Give up after this long")
-	cmd.Flags().BoolVar(&exitStatus, "exit-status", true, "Exit with non-zero status if the pipeline fails")
+	cmd.Flags().BoolVar(&exitStatus, "exit-status", true, "Exit with non-zero status if the pipeline fails (use --exit-status=false to disable)")
 	return cmd
 }
 
-func watchPipeline(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, uuid string, interval, timeout time.Duration) error {
+// watchPipeline polls until completion. When exitStatus is true a
+// non-successful result yields a non-zero exit code.
+func watchPipeline(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, uuid string, interval, timeout time.Duration, exitStatus bool) error {
 	ios := f.IOStreams
 	cs := ios.ColorScheme()
 	if interval <= 0 {
@@ -522,6 +523,9 @@ func watchPipeline(ctx context.Context, f *cmdutil.Factory, client *api.Client, 
 		return nil
 	default:
 		fmt.Fprintf(ios.ErrOut, "%s Pipeline #%d finished with %s\n", cs.FailureIcon(), last.BuildNumber, result)
+		if !exitStatus {
+			return nil
+		}
 		return cmdutil.ErrSilent
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +28,7 @@ func NewCmdGitCredential(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			return gitCredential(args[0], f.IOStreams.In, f.IOStreams.Out, func() (config.Credential, error) {
-				return config.ResolveCredential(cfg.Credentials(), config.DefaultHost, os.Getenv)
+				return config.ResolveFreshCredential(cmd.Context(), cfg.Credentials(), config.DefaultHost, os.Getenv, time.Now())
 			})
 		},
 	}
