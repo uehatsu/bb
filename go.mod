@@ -6,6 +6,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/term v0.45.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
