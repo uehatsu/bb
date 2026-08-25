@@ -58,7 +58,7 @@ func NewCmdReopen(f *cmdutil.Factory) *cobra.Command {
 		Short: "Reopen a pull request (not supported by Bitbucket)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return errors.New("Bitbucket Cloud cannot reopen a declined pull request. Create a new pull request from the same branch instead: `bb pr create`")
+			return errors.New("bitbucket Cloud cannot reopen a declined pull request. Create a new pull request from the same branch instead: `bb pr create`")
 		},
 	}
 }

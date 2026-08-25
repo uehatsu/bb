@@ -1,0 +1,24 @@
+name: Nightly integration
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    # Do not block main; failures surface here and via notifications.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run integration tests against Bitbucket Cloud
+        env:
+          BB_INTEGRATION: "1"
+          BB_EMAIL: ${{ secrets.BB_INTEGRATION_EMAIL }}
+          BB_TOKEN: ${{ secrets.BB_INTEGRATION_TOKEN }}
+          BB_INTEGRATION_REPO: ${{ vars.BB_INTEGRATION_REPO }}
+        run: go test -v -run . ./internal/integration/
