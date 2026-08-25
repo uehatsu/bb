@@ -13,6 +13,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/iostreams"
 )
 
 // NewCmdPR returns the `pr` command group.
@@ -92,7 +93,7 @@ func findPRForBranch(ctx context.Context, client *api.Client, repo cmdutil.Repo,
 	if len(found) == 0 {
 		return nil, fmt.Errorf("no open pull request found for branch %q", branch)
 	}
-	return fetchPR(ctx, client, repo, found[0].ID)
+	return &found[0], nil
 }
 
 // resolvePR resolves a PR from a selector: a number, a branch name, a PR URL,
@@ -144,12 +145,7 @@ func currentUser(ctx context.Context, client *api.Client) (*bitbucket.User, erro
 	return &u, nil
 }
 
-func stateColor(cs interface {
-	Green(string) string
-	Red(string) string
-	Magenta(string) string
-	Gray(string) string
-}, pr *bitbucket.PullRequest) func(string) string {
+func stateColor(cs *iostreams.ColorScheme, pr *bitbucket.PullRequest) func(string) string {
 	switch pr.State {
 	case "OPEN":
 		if pr.Draft {

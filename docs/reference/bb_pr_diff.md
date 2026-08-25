@@ -9,9 +9,9 @@ bb pr diff [<number> | <branch> | <url>] [flags]
 ### Options
 
 ```
-      --color       Force colored diff output
-      --name-only   Output only names of changed files
-      --stat        Output a diffstat summary
+      --color string   Use color in diff output: {always|never|auto} (default "auto")
+      --name-only      Output only names of changed files
+      --stat           Output a diffstat summary
 ```
 
 ### Options inherited from parent commands

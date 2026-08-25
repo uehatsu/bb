@@ -5,6 +5,8 @@ package cmdutil
 import (
 	"errors"
 	"fmt"
+
+	"github.com/uehatsu/bb/internal/prompt"
 )
 
 // Exit codes, aligned with GitHub CLI.
@@ -19,8 +21,9 @@ const (
 // ErrSilent indicates the error has already been reported to the user.
 var ErrSilent = errors.New("silent error")
 
-// ErrCancel is returned when the user aborts an interactive prompt.
-var ErrCancel = errors.New("cancelled")
+// ErrCancel is returned when the user aborts an interactive prompt. It is
+// the same value as prompt.ErrCancelled so either can be tested with errors.Is.
+var ErrCancel = prompt.ErrCancelled
 
 // ErrPending is used by watch-style commands whose target is still running.
 var ErrPending = errors.New("pending")

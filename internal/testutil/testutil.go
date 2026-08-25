@@ -33,6 +33,7 @@ type Harness struct {
 // server. Register handlers on h.Mux (paths are prefixed with /2.0).
 func NewHarness(t *testing.T) *Harness {
 	t.Helper()
+	IsolateEnv(t)
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -53,6 +54,16 @@ func NewHarness(t *testing.T) *Harness {
 		Prompter:  stub,
 	}
 	return &Harness{Factory: f, Config: cfg, In: in, Out: out, ErrOut: errOut, Server: srv, Mux: mux, Prompt: stub}
+}
+
+// IsolateEnv clears every bb-related environment variable so tests never
+// touch the developer's real credentials, keyring, or browser.
+func IsolateEnv(t *testing.T) {
+	t.Helper()
+	for _, k := range []string{"BB_TOKEN", "BB_EMAIL", "BB_AUTH_METHOD", "BB_CREDENTIAL_STORE", "BB_REPO", "BB_WORKSPACE", "BB_CONFIG_DIR", "BB_OAUTH_CLIENT_ID", "BB_OAUTH_CLIENT_SECRET", "BB_DEBUG", "BB_NO_RETRY", "BB_PAGER", "PAGER", "BROWSER"} {
+		t.Setenv(k, "")
+	}
+	t.Setenv("BB_CONFIG_DIR", t.TempDir())
 }
 
 // JSON registers a handler returning body for method+path.

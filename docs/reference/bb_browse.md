@@ -31,7 +31,7 @@ bb browse [<number> | <path>] [flags]
       --commits         Open the commits page
   -n, --no-browser      Print destination URL instead of opening the browser
       --pipelines       Open the pipelines page
-  -p, --pull-requests   Open the pull requests page
+      --pull-requests   Open the pull requests page
   -R, --repo string     Select another repository using the WORKSPACE/REPO format
   -s, --settings        Open repository settings
 ```

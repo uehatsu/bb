@@ -2,6 +2,7 @@ package pr
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -77,8 +78,6 @@ merge task until it completes (see --timeout).`,
 	cmd.Flags().StringVar(&opts.Message, "message", "", "Commit message for the merge commit")
 	cmd.Flags().DurationVar(&opts.Timeout, "timeout", 5*time.Minute, "How long to wait for an asynchronous merge")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip the confirmation prompt")
-	// gh uses -m for --body on some commands; here --message has no shorthand conflict
-	cmd.Flags().Lookup("message").Shorthand = ""
 	return cmd
 }
 
@@ -120,7 +119,7 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 		if ios.CanPrompt() && !opts.Yes {
 			choice, err := f.Prompter.Select("What merge strategy would you like to use?", []string{"merge_commit", "squash", "fast_forward", "squash_fast_forward", "rebase_fast_forward", "rebase_merge"})
 			if err != nil {
-				return cmdutil.ErrCancel
+				return cmdutil.PromptError(err)
 			}
 			strategy = choice
 		}
@@ -128,7 +127,7 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 	if ios.CanPrompt() && !opts.Yes {
 		ok, err := f.Prompter.Confirm(fmt.Sprintf("Merge pull request #%d (%s) into %s using %s?", pr.ID, pr.Title, pr.Destination.Branch.Name, strategy), true)
 		if err != nil || !ok {
-			return cmdutil.ErrCancel
+			return cmdutil.PromptError(err)
 		}
 	}
 
@@ -145,9 +144,14 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 	}
 	defer resp.Body.Close()
 
+	var merged *bitbucket.PullRequest
 	switch resp.StatusCode {
 	case http.StatusOK:
-		// merged synchronously
+		// merged synchronously: the response body is the merged PR
+		var m bitbucket.PullRequest
+		if err := json.NewDecoder(resp.Body).Decode(&m); err == nil && m.ID != 0 {
+			merged = &m
+		}
 	case http.StatusAccepted:
 		loc := resp.Header.Get("Location")
 		if loc == "" {
@@ -161,9 +165,10 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 		return fmt.Errorf("unexpected response %s from merge", resp.Status)
 	}
 
-	merged, err := fetchPR(ctx, client, repo, pr.ID)
-	if err != nil {
-		return err
+	if merged == nil {
+		if merged, err = fetchPR(ctx, client, repo, pr.ID); err != nil {
+			return err
+		}
 	}
 	if merged.State != "MERGED" {
 		return fmt.Errorf("merge finished but pull request state is %s", merged.State)

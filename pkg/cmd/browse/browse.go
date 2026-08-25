@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/uehatsu/bb/internal/browser"
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/gitctx"
 )
@@ -67,22 +66,14 @@ directory on the selected branch.`,
 				fmt.Fprintln(f.IOStreams.Out, u)
 				return nil
 			}
-			if f.IOStreams.IsStdoutTTY() {
-				fmt.Fprintf(f.IOStreams.ErrOut, "Opening %s in your browser.\n", u)
-			}
-			cfg, _ := f.Config()
-			configured := ""
-			if cfg != nil {
-				configured, _ = cfg.Get("browser")
-			}
-			return browser.New(configured).Browse(u)
+			return cmdutil.OpenBrowser(f, u)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Branch, "branch", "b", "", "Select another branch by passing in the branch name")
 	cmd.Flags().StringVarP(&opts.Commit, "commit", "c", "", "Open the commit page for the given hash")
 	cmd.Flags().BoolVarP(&opts.Settings, "settings", "s", false, "Open repository settings")
 	cmd.Flags().BoolVar(&opts.Pipelines, "pipelines", false, "Open the pipelines page")
-	cmd.Flags().BoolVarP(&opts.PullRequests, "pull-requests", "p", false, "Open the pull requests page")
+	cmd.Flags().BoolVar(&opts.PullRequests, "pull-requests", false, "Open the pull requests page")
 	cmd.Flags().BoolVar(&opts.Commits, "commits", false, "Open the commits page")
 	cmd.Flags().BoolVarP(&opts.NoBrowser, "no-browser", "n", false, "Print destination URL instead of opening the browser")
 	cmdutil.EnableRepoOverride(cmd, f)

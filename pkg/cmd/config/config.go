@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -71,6 +72,11 @@ func newCmdSet(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if args[0] == "credential_store" {
+				if err := migrateCredentials(f, cfg, args[1]); err != nil {
+					return err
+				}
+			}
 			if err := cfg.Set(args[0], args[1]); err != nil {
 				return cmdutil.FlagErrorWrap(err)
 			}
@@ -96,4 +102,37 @@ func newCmdList(f *cmdutil.Factory) *cobra.Command {
 			return nil
 		},
 	}
+}
+
+// migrateCredentials moves the stored credential from the current store to
+// the newly selected one so switching backends does not log the user out.
+func migrateCredentials(f *cmdutil.Factory, cfg *bbconfig.Config, target string) error {
+	if err := bbconfig.ValidateValue("credential_store", target); err != nil {
+		return cmdutil.FlagErrorWrap(err)
+	}
+	current, _ := cfg.Get("credential_store")
+	if current == target {
+		return nil
+	}
+	cred, err := cfg.Credentials().Get(bbconfig.DefaultHost)
+	if errors.Is(err, bbconfig.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var dst bbconfig.CredentialStore
+	if target == bbconfig.StoreKeyring {
+		dst = bbconfig.NewKeyringCredentialStore()
+	} else {
+		dst = bbconfig.NewFileCredentialStore(bbconfig.Dir())
+	}
+	if err := dst.Set(bbconfig.DefaultHost, cred); err != nil {
+		return fmt.Errorf("copying credential to %s store: %w", target, err)
+	}
+	if err := cfg.Credentials().Delete(bbconfig.DefaultHost); err != nil {
+		fmt.Fprintf(f.IOStreams.ErrOut, "warning: credential copied to %s but could not be removed from %s: %v\n", target, current, err)
+	}
+	fmt.Fprintf(f.IOStreams.ErrOut, "%s Moved credential from %s to %s store\n", f.IOStreams.ColorScheme().SuccessIcon(), current, target)
+	return nil
 }

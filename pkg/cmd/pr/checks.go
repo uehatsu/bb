@@ -25,10 +25,7 @@ request. Exit code 8 indicates checks are still in progress, and 1 that some
 failed.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				var pending, failed int
 				report := func(ctx context.Context) (bool, error) {

@@ -14,10 +14,12 @@ import (
 	"github.com/uehatsu/bb/internal/config"
 	"github.com/uehatsu/bb/internal/iostreams"
 	"github.com/uehatsu/bb/internal/prompt"
+	"github.com/uehatsu/bb/internal/testutil"
 )
 
 func testFactory(t *testing.T, handler http.Handler) (*cmdutil.Factory, *config.Config, *bytes.Buffer, *bytes.Buffer, *bytes.Buffer) {
 	t.Helper()
+	testutil.IsolateEnv(t)
 	dir := t.TempDir()
 	cfg, err := config.LoadFrom(dir)
 	if err != nil {

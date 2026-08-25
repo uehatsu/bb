@@ -16,6 +16,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/iostreams"
 	"github.com/uehatsu/bb/internal/output"
 )
 
@@ -92,12 +93,7 @@ func statusText(p *bitbucket.Pipeline) string {
 	return p.State.Name
 }
 
-func statusColor(cs interface {
-	Green(string) string
-	Red(string) string
-	Yellow(string) string
-	Gray(string) string
-}, p *bitbucket.Pipeline) func(string) string {
+func statusColor(cs *iostreams.ColorScheme, p *bitbucket.Pipeline) func(string) string {
 	switch statusText(p) {
 	case "SUCCESSFUL":
 		return cs.Green
@@ -111,14 +107,7 @@ func statusColor(cs interface {
 
 func isDone(p *bitbucket.Pipeline) bool { return p.State.Name == "COMPLETED" }
 
-func printPipelineRow(tp *output.TablePrinter, cs interface {
-	Green(string) string
-	Red(string) string
-	Yellow(string) string
-	Gray(string) string
-	Cyan(string) string
-	Bold(string) string
-}, p *bitbucket.Pipeline, now time.Time) {
+func printPipelineRow(tp *output.TablePrinter, cs *iostreams.ColorScheme, p *bitbucket.Pipeline, now time.Time) {
 	tp.AddField(fmt.Sprintf("#%d", p.BuildNumber), cs.Bold)
 	tp.AddField(statusText(p), statusColor(cs, p))
 	tp.AddField(p.Target.RefName, cs.Cyan)

@@ -203,3 +203,7 @@ bb/
 - Step 0〜11 実装済み（v0.1 + v0.2 相当）。全コマンドに httptest ベースのユニットテストあり、golangci-lint 0 件。
 - Step 12 実装済み: `bb auth login --web`（Authorization Code、state 検証、127.0.0.1 固定ポート、ワンショット）、`bb auth refresh`、Factory での自動 refresh、`credential_store=keyring`（zalando/go-keyring）。
 - 実 API に対する smoke（`bb auth login` → `pr create` → `merge`）は API Token を用意した上で手動確認が必要。
+
+## 10. MAGI コードレビュー対応（2026-08-25）
+実装コード全体の MAGI 審議（MELCHIOR=APPROVE / BALTHASAR=CONDITIONAL / CASPER=CONDITIONAL）で挙がった 9 分類すべてに対応済み:
+`pr checkout` の修正と git Runner インターフェース化（回帰テスト追加）、OAuth refresh の `config.ResolveFreshCredential` への集約（API クライアント・git credential helper・`auth token` で共有）、OAuth callback の偽装要求を無視して待機継続、`pipeline watch --exit-status` 実装、`pr diff --color {always|never|auto}`、`signal.NotifyContext` による Ctrl-C=exit 2、`pr checks --watch` の Poll 化、remote/サーバー由来 URL・名前の検証、`pr ready/edit` の title 同梱、握りつぶしていたエラーの表面化、`--commit` の target 形式、`OpenBrowser`/`OptionalArg`/`MainBranch`/`gitctx.CloneURL` への集約、一覧の `fields` 指定、冗長な再取得の削減、gh と衝突する短縮フラグの整理、`bb api` の `-H --paginate`/`?` 対応、`credential_store` 切替時の資格情報移行、テスト環境変数の遮断。

@@ -146,7 +146,7 @@ Commands operate on the repository of the current directory's git remote
 | `BB_CONFIG_DIR` | config directory (default `$XDG_CONFIG_HOME/bb`) |
 | `BB_PAGER`, `PAGER` | pager for long output |
 | `BROWSER` | browser command for `--web` |
-| `BB_DEBUG=1` | log HTTP requests (secrets masked); `=2` also logs bodies |
+| `BB_DEBUG=1` | log HTTP requests (secrets masked); `=2` also logs response bodies (may contain personal data such as e-mail addresses) |
 | `BB_NO_RETRY=1` | fail immediately on 429/5xx instead of retrying |
 | `NO_COLOR` | disable colors |
 

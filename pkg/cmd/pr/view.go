@@ -10,7 +10,6 @@ import (
 
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
-	"github.com/uehatsu/bb/internal/browser"
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/output"
 )
@@ -27,10 +26,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 Without an argument, the pull request for the current branch is shown.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			exporter, err := buildExporter()
 			if err != nil {
 				return err
@@ -42,17 +38,6 @@ Without an argument, the pull request for the current branch is shown.`,
 	cmd.Flags().BoolVarP(&comments, "comments", "c", false, "View pull request comments")
 	buildExporter = cmdutil.AddJSONFlags(cmd, bitbucket.PullRequestFields.Validate, bitbucket.PullRequestFields.Names())
 	return cmd
-}
-
-func openInBrowser(f *cmdutil.Factory, u string) error {
-	if f.IOStreams.IsStdoutTTY() {
-		fmt.Fprintf(f.IOStreams.ErrOut, "Opening %s in your browser.\n", u)
-	}
-	configured := ""
-	if cfg, err := f.Config(); err == nil {
-		configured, _ = cfg.Get("browser")
-	}
-	return browser.New(configured).Browse(u)
 }
 
 func runView(ctx context.Context, f *cmdutil.Factory, selector string, web, withComments bool, exporter *output.Exporter) error {
@@ -69,7 +54,7 @@ func runView(ctx context.Context, f *cmdutil.Factory, selector string, web, with
 		return err
 	}
 	if web {
-		return openInBrowser(f, pr.Links.HTML())
+		return cmdutil.OpenBrowser(f, pr.Links.HTML())
 	}
 	ios := f.IOStreams
 	if exporter != nil {

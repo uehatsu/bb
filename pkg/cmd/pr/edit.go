@@ -33,10 +33,7 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			if !cmd.Flags().Changed("title") && !cmd.Flags().Changed("body") && base == "" && len(addReviewers) == 0 && len(removeReviewers) == 0 {
 				return cmdutil.FlagErrorf("specify at least one field to edit")
 			}
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {

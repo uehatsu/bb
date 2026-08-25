@@ -13,7 +13,7 @@ bb pipeline watch <number|uuid> [flags]
 ### Options
 
 ```
-      --exit-status         Exit with non-zero status if the pipeline fails (default true)
+      --exit-status         Exit with non-zero status if the pipeline fails (use --exit-status=false to disable) (default true)
   -i, --interval duration   Initial polling interval (default 3s, grows to 30s)
       --timeout duration    Give up after this long (default 2h0m0s)
 ```

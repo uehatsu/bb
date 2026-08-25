@@ -36,6 +36,8 @@ type ListOptions struct {
 	Sort string
 	// Extra query parameters.
 	Extra url.Values
+	// Headers are sent with every page request.
+	Headers map[string]string
 }
 
 func (o ListOptions) pageLen() int {
@@ -79,7 +81,7 @@ func Paginate[T any](ctx context.Context, c *Client, path string, opts ListOptio
 	count := 0
 	for next != "" {
 		var page Page[T]
-		if _, err := c.Do(ctx, Request{Path: next, Query: query}, &page); err != nil {
+		if _, err := c.Do(ctx, Request{Path: next, Query: query, Headers: opts.Headers}, &page); err != nil {
 			return err
 		}
 		for _, v := range page.Values {

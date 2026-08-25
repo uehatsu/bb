@@ -106,7 +106,7 @@ func TestCreate(t *testing.T) {
 		w.Write([]byte(repoJSON))
 	})
 	cmd := NewCmdCreate(h.Factory)
-	cmd.SetArgs([]string{"acme/Widgets", "--private", "-p", "PROJ", "-d", "Gadgets", "--fork-policy", "no_forks"})
+	cmd.SetArgs([]string{"acme/Widgets", "--private", "--project", "PROJ", "-d", "Gadgets", "--fork-policy", "no_forks"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}

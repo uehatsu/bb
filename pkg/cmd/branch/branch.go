@@ -130,14 +130,9 @@ func NewCmdCreate(f *cmdutil.Factory) *cobra.Command {
 			}
 			target := from
 			if target == "" {
-				var r bitbucket.Repository
-				if _, err := client.Do(ctx, api.Request{Path: fmt.Sprintf("/repositories/%s/%s", repo.Workspace, repo.Slug), Query: map[string][]string{"fields": {"mainbranch.name"}}}, &r); err != nil {
-					return err
+				if target, err = cmdutil.MainBranch(ctx, client, repo); err != nil {
+					return fmt.Errorf("%w; use --from", err)
 				}
-				if r.MainBranch == nil {
-					return fmt.Errorf("repository has no main branch; use --from")
-				}
-				target = r.MainBranch.Name
 			}
 			var created bitbucket.Branch
 			if _, err := client.Do(ctx, api.Request{Method: "POST", Path: refsPath(repo, ""), Body: map[string]any{"name": args[0], "target": map[string]string{"hash": target}}}, &created); err != nil {
@@ -171,7 +166,7 @@ func NewCmdDelete(f *cmdutil.Factory) *cobra.Command {
 			if !yes && f.IOStreams.CanPrompt() {
 				ok, err := f.Prompter.Confirm(fmt.Sprintf("Delete branch %s in %s?", args[0], repo.FullName()), false)
 				if err != nil || !ok {
-					return cmdutil.ErrCancel
+					return cmdutil.PromptError(err)
 				}
 			}
 			client, err := f.APIClient()

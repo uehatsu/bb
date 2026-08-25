@@ -2,6 +2,12 @@
 
 Reopen a pull request (not supported by Bitbucket)
 
+### Synopsis
+
+Bitbucket Cloud has no API to reopen a declined pull request; this command
+exists only so that GitHub CLI users get an explanation instead of an unknown
+command error. Create a new pull request from the same branch instead.
+
 ```
 bb pr reopen [<number>] [flags]
 ```

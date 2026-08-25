@@ -48,10 +48,7 @@ in addition to the review action.`,
 			if comment && strings.TrimSpace(body) == "" {
 				return cmdutil.FlagErrorf("--comment requires a body (--body or --body-file)")
 			}
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				cs := f.IOStreams.ColorScheme()
 				prID := pr.ID
@@ -112,7 +109,7 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 				}
 				v, err := f.Prompter.Editor("Comment", "")
 				if err != nil {
-					return cmdutil.ErrCancel
+					return cmdutil.PromptError(err)
 				}
 				body = v
 			}
@@ -122,10 +119,7 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 			if line > 0 && path == "" {
 				return cmdutil.FlagErrorf("--line requires --path")
 			}
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				prID := pr.ID
 				var created *bitbucket.Comment

@@ -28,10 +28,7 @@ func NewCmdDiff(f *cmdutil.Factory) *cobra.Command {
 			default:
 				return cmdutil.FlagErrorf("invalid --color %q (always|never|auto)", color)
 			}
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				ios := f.IOStreams
 				prID := pr.ID

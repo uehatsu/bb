@@ -21,10 +21,7 @@ Without --yes you must type the repository's full name to confirm. The token
 needs the delete:repository:bitbucket scope.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			arg := ""
-			if len(args) > 0 {
-				arg = args[0]
-			}
+			arg := cmdutil.OptionalArg(args)
 			repo, err := resolveRepoArg(f, arg)
 			if err != nil {
 				return err
@@ -35,7 +32,7 @@ needs the delete:repository:bitbucket scope.`,
 				}
 				typed, err := f.Prompter.Input(fmt.Sprintf("Type %s to confirm deletion", repo.FullName()), "")
 				if err != nil {
-					return cmdutil.ErrCancel
+					return cmdutil.PromptError(err)
 				}
 				if typed != repo.FullName() {
 					return fmt.Errorf("confirmation did not match %q; aborting", repo.FullName())
@@ -52,7 +49,7 @@ needs the delete:repository:bitbucket scope.`,
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&yes, "yes", false, "Confirm deletion without prompting")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Confirm deletion without prompting")
 	cmdutil.EnableRepoOverride(cmd, f)
 	return cmd
 }

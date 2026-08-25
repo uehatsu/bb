@@ -80,7 +80,7 @@ func runList(ctx context.Context, f *cmdutil.Factory, opts *ListOptions, exporte
 		return err
 	}
 	if opts.Web {
-		return openInBrowser(f, "https://bitbucket.org/"+repo.FullName()+"/pull-requests/")
+		return cmdutil.OpenBrowser(f, "https://bitbucket.org/"+repo.FullName()+"/pull-requests/")
 	}
 	states, err := stateParams(opts.State)
 	if err != nil {

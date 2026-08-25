@@ -65,7 +65,7 @@ workspace's oldest project.`,
 				if f.IOStreams.CanPrompt() {
 					v, err := f.Prompter.Select("Visibility", []string{"private", "public"})
 					if err != nil {
-						return cmdutil.ErrCancel
+						return cmdutil.PromptError(err)
 					}
 					opts.Private = v == "private"
 				} else {
@@ -76,7 +76,7 @@ workspace's oldest project.`,
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Workspace, "workspace", "w", "", "Workspace to create the repository in")
-	cmd.Flags().StringVarP(&opts.Project, "project", "p", "", "Project key to place the repository in")
+	cmd.Flags().StringVar(&opts.Project, "project", "", "Project key to place the repository in")
 	cmd.Flags().StringVarP(&opts.Description, "description", "d", "", "Description of the repository")
 	cmd.Flags().BoolVar(&opts.Private, "private", false, "Make the new repository private")
 	cmd.Flags().BoolVar(&opts.Public, "public", false, "Make the new repository public")
@@ -89,14 +89,14 @@ workspace's oldest project.`,
 func promptCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 	var err error
 	if opts.Name, err = f.Prompter.Input("Repository name", "my-repo"); err != nil {
-		return cmdutil.ErrCancel
+		return cmdutil.PromptError(err)
 	}
 	if opts.Description, err = f.Prompter.Input("Description", ""); err != nil {
-		return cmdutil.ErrCancel
+		return cmdutil.PromptError(err)
 	}
 	v, err := f.Prompter.Select("Visibility", []string{"private", "public"})
 	if err != nil {
-		return cmdutil.ErrCancel
+		return cmdutil.PromptError(err)
 	}
 	opts.Private = v == "private"
 	return nil

@@ -52,7 +52,7 @@ func newHTTPError(resp *http.Response) *HTTPError {
 	e := &HTTPError{
 		StatusCode: resp.StatusCode,
 		Method:     resp.Request.Method,
-		URL:        resp.Request.URL.String(),
+		URL:        maskURL(resp.Request.URL),
 		Body:       string(body),
 	}
 	var env bitbucketErrorEnvelope

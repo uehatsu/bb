@@ -23,10 +23,7 @@ configured default workspace). Use --name to rename the fork, which is
 required when forking into the same workspace.`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			arg := ""
-			if len(args) > 0 {
-				arg = args[0]
-			}
+			arg := cmdutil.OptionalArg(args)
 			repo, err := resolveRepoArg(f, arg)
 			if err != nil {
 				return err

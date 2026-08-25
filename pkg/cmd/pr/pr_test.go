@@ -63,7 +63,7 @@ func TestViewByNumberAndBranch(t *testing.T) {
 	var listReq *http.Request
 	h.Handle("/repositories/acme/widgets/pullrequests", func(w http.ResponseWriter, r *http.Request) {
 		listReq = r
-		w.Write([]byte(`{"values":[{"id":42}]}`))
+		w.Write([]byte(`{"values":[` + prJSON + `]}`))
 	})
 	h.JSON("GET", "/repositories/acme/widgets/pullrequests/42/comments", 200, `{"values":[{"id":1,"content":{"raw":"LGTM"},"user":{"nickname":"bob"},"created_on":"2026-08-20T00:00:00Z"},{"id":2,"deleted":true,"content":{"raw":"gone"}}]}`)
 

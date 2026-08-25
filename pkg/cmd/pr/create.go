@@ -122,7 +122,7 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, opts *CreateOptions) err
 		if opts.Title != "" {
 			u += "&title=" + url.QueryEscape(opts.Title)
 		}
-		return openInBrowser(f, u)
+		return cmdutil.OpenBrowser(f, u)
 	}
 
 	client, err := f.APIClient()
@@ -132,12 +132,8 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, opts *CreateOptions) err
 
 	base := opts.Base
 	if base == "" {
-		var r bitbucket.Repository
-		if _, err := client.Do(ctx, api.Request{Path: fmt.Sprintf("/repositories/%s/%s", repo.Workspace, repo.Slug), Query: map[string][]string{"fields": {"mainbranch.name"}}}, &r); err != nil {
+		if base, err = cmdutil.MainBranch(ctx, client, repo); err != nil {
 			return err
-		}
-		if r.MainBranch != nil {
-			base = r.MainBranch.Name
 		}
 	}
 	if head == base {
@@ -157,14 +153,14 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, opts *CreateOptions) err
 		}
 		fmt.Fprintf(ios.ErrOut, "\nCreating pull request for %s into %s in %s\n\n", cs.Cyan(head), cs.Cyan(base), repo.FullName())
 		if title, err = f.Prompter.Input("Title", ""); err != nil {
-			return cmdutil.ErrCancel
+			return cmdutil.PromptError(err)
 		}
 		if strings.TrimSpace(title) == "" {
 			return errors.New("title must not be empty")
 		}
 		if body == "" {
 			if body, err = f.Prompter.Editor("Body", ""); err != nil {
-				return cmdutil.ErrCancel
+				return cmdutil.PromptError(err)
 			}
 		}
 	}

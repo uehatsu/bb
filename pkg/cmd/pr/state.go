@@ -22,10 +22,7 @@ func NewCmdDecline(f *cmdutil.Factory) *cobra.Command {
 		Short:   "Decline (close) a pull request",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				if pr.State != "OPEN" {
 					return fmt.Errorf("pull request #%d is already %s", pr.ID, pr.State)
@@ -54,7 +51,10 @@ func NewCmdReopen(f *cmdutil.Factory) *cobra.Command {
 	return &cobra.Command{
 		Use:   "reopen [<number>]",
 		Short: "Reopen a pull request (not supported by Bitbucket)",
-		Args:  cobra.MaximumNArgs(1),
+		Long: `Bitbucket Cloud has no API to reopen a declined pull request; this command
+exists only so that GitHub CLI users get an explanation instead of an unknown
+command error. Create a new pull request from the same branch instead.`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return errors.New("declined pull requests cannot be reopened on Bitbucket Cloud; create a new pull request from the same branch instead: `bb pr create`")
 		},
@@ -68,10 +68,7 @@ func NewCmdApprove(f *cmdutil.Factory) *cobra.Command {
 		Short: "Approve a pull request",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, pr.ID, "approve")}, nil); err != nil {
 					return err
@@ -90,10 +87,7 @@ func NewCmdUnapprove(f *cmdutil.Factory) *cobra.Command {
 		Short: "Remove your approval from a pull request",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: prPath(repo, pr.ID, "approve")}, nil); err != nil {
 					return err
@@ -113,10 +107,7 @@ func NewCmdReady(f *cmdutil.Factory) *cobra.Command {
 		Short: "Mark a pull request as ready for review",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			sel := ""
-			if len(args) > 0 {
-				sel = args[0]
-			}
+			sel := cmdutil.OptionalArg(args)
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				// Bitbucket's PUT requires the title even for partial updates.
 				body := map[string]any{"title": pr.Title, "draft": undo}

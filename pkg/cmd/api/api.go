@@ -146,7 +146,7 @@ func run(ctx context.Context, f *cmdutil.Factory, opts *Options) error {
 
 	if opts.Paginate {
 		var all []json.RawMessage
-		err := bbapi.Paginate(ctx, client, path, bbapi.ListOptions{Extra: req.Query}, func(v json.RawMessage) error {
+		err := bbapi.Paginate(ctx, client, path, bbapi.ListOptions{Extra: req.Query, Headers: headers}, func(v json.RawMessage) error {
 			all = append(all, v)
 			return nil
 		})
@@ -164,7 +164,7 @@ func run(ctx context.Context, f *cmdutil.Factory, opts *Options) error {
 		var herr *bbapi.HTTPError
 		if errors.As(err, &herr) {
 			if opts.Include {
-				fmt.Fprintf(ios.Out, "HTTP/%d %d %s\n\n", 1, herr.StatusCode, http.StatusText(herr.StatusCode))
+				fmt.Fprintf(ios.Out, "HTTP/1.1 %d %s\n\n", herr.StatusCode, http.StatusText(herr.StatusCode))
 			}
 			if !opts.Silent && herr.Body != "" {
 				printRaw(ios.Out, []byte(herr.Body), ios.IsStdoutTTY())

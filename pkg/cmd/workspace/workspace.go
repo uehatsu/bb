@@ -103,10 +103,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			arg := ""
-			if len(args) > 0 {
-				arg = args[0]
-			}
+			arg := cmdutil.OptionalArg(args)
 			ws, err := resolveWorkspace(f, arg)
 			if err != nil {
 				return err
@@ -158,10 +155,7 @@ func NewCmdMembers(f *cmdutil.Factory) *cobra.Command {
 		Short: "List members of a workspace",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			arg := ""
-			if len(args) > 0 {
-				arg = args[0]
-			}
+			arg := cmdutil.OptionalArg(args)
 			ws, err := resolveWorkspace(f, arg)
 			if err != nil {
 				return err

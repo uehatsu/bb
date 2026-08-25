@@ -11,7 +11,6 @@ import (
 
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
-	"github.com/uehatsu/bb/internal/browser"
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/output"
 )
@@ -27,10 +26,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 		Long:  "Display the description and README of a repository.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			arg := ""
-			if len(args) > 0 {
-				arg = args[0]
-			}
+			arg := cmdutil.OptionalArg(args)
 			repo, err := resolveRepoArg(f, arg)
 			if err != nil {
 				return err
@@ -56,15 +52,7 @@ func runView(ctx context.Context, f *cmdutil.Factory, repo cmdutil.Repo, branch 
 		if branch != "" {
 			u += "/branch/" + branch
 		}
-		if ios.IsStdoutTTY() {
-			fmt.Fprintf(ios.ErrOut, "Opening %s in your browser.\n", u)
-		}
-		cfg, _ := f.Config()
-		configured := ""
-		if cfg != nil {
-			configured, _ = cfg.Get("browser")
-		}
-		return browser.New(configured).Browse(u)
+		return cmdutil.OpenBrowser(f, u)
 	}
 	client, err := f.APIClient()
 	if err != nil {

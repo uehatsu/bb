@@ -17,7 +17,7 @@ bb repo delete [<repository>] [flags]
 
 ```
   -R, --repo string   Select another repository using the WORKSPACE/REPO format
-      --yes           Confirm deletion without prompting
+  -y, --yes           Confirm deletion without prompting
 ```
 
 ### Options inherited from parent commands

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -123,13 +124,13 @@ func runLogin(ctx context.Context, f *cmdutil.Factory, opts *LoginOptions) error
 		if cred.Method == config.AuthAPIToken && cred.Email == "" {
 			cred.Email, err = f.Prompter.Input("Atlassian account email", "you@example.com")
 			if err != nil {
-				return cmdutil.ErrCancel
+				return cmdutil.PromptError(err)
 			}
 			cred.Email = strings.TrimSpace(cred.Email)
 		}
 		cred.Token, err = f.Prompter.Password("Paste your API token")
 		if err != nil {
-			return cmdutil.ErrCancel
+			return cmdutil.PromptError(err)
 		}
 		cred.Token = strings.TrimSpace(cred.Token)
 		if opts.ExpiresIn == "" {
@@ -248,13 +249,13 @@ func runLoginWeb(ctx context.Context, f *cmdutil.Factory, opts *LoginOptions) er
 		}
 		if clientID == "" {
 			if clientID, err = f.Prompter.Input("OAuth consumer key", ""); err != nil {
-				return cmdutil.ErrCancel
+				return cmdutil.PromptError(err)
 			}
 			clientID = strings.TrimSpace(clientID)
 		}
 		if secret == "" {
 			if secret, err = f.Prompter.Password("OAuth consumer secret"); err != nil {
-				return cmdutil.ErrCancel
+				return cmdutil.PromptError(err)
 			}
 			secret = strings.TrimSpace(secret)
 		}
@@ -265,7 +266,11 @@ func runLoginWeb(ctx context.Context, f *cmdutil.Factory, opts *LoginOptions) er
 	port := opts.Port
 	if port == 0 {
 		if v, _ := cfg.Get("oauth_port"); v != "" {
-			fmt.Sscanf(v, "%d", &port) //nolint:errcheck
+			n, err := strconv.Atoi(v)
+			if err != nil || n <= 0 || n > 65535 {
+				return fmt.Errorf("invalid oauth_port config value %q", v)
+			}
+			port = n
 		}
 	}
 	ocfg := oauth.Config{ClientID: clientID, ClientSecret: secret, Port: port}

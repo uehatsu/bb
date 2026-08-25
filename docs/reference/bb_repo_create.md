@@ -30,7 +30,7 @@ bb repo create [<name>] [flags]
       --fork-policy string   Fork policy: {allow_forks|no_public_forks|no_forks}
       --language string      Primary programming language
       --private              Make the new repository private
-  -p, --project string       Project key to place the repository in
+      --project string       Project key to place the repository in
       --public               Make the new repository public
   -w, --workspace string     Workspace to create the repository in
 ```

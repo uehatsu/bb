@@ -20,10 +20,7 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
   $ bb repo edit acme/widgets --visibility private --default-branch main`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			arg := ""
-			if len(args) > 0 {
-				arg = args[0]
-			}
+			arg := cmdutil.OptionalArg(args)
 			repo, err := resolveRepoArg(f, arg)
 			if err != nil {
 				return err
