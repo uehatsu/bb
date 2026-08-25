@@ -32,6 +32,18 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 		NewCmdView(f),
 		NewCmdCreate(f),
 		NewCmdCheckout(f),
+		NewCmdMerge(f),
+		NewCmdDecline(f),
+		NewCmdReopen(f),
+		NewCmdApprove(f),
+		NewCmdUnapprove(f),
+		NewCmdReview(f),
+		NewCmdComment(f),
+		NewCmdDiff(f),
+		NewCmdStatus(f),
+		NewCmdChecks(f),
+		NewCmdEdit(f),
+		NewCmdReady(f),
 	)
 	return cmd
 }
@@ -88,6 +100,9 @@ func findPRForBranch(ctx context.Context, client *api.Client, repo cmdutil.Repo,
 func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, error) {
 	selector = strings.TrimSpace(selector)
 	if selector == "" {
+		if f.GitClient == nil {
+			return nil, errors.New("pull request number or branch required")
+		}
 		g, err := f.GitClient()
 		if err != nil {
 			return nil, errors.New("pull request number or branch required")

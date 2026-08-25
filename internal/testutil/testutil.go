@@ -3,6 +3,7 @@ package testutil
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/config"
+	"github.com/uehatsu/bb/internal/git"
 	"github.com/uehatsu/bb/internal/iostreams"
 	"github.com/uehatsu/bb/internal/prompt"
 )
@@ -45,8 +47,9 @@ func NewHarness(t *testing.T) *Harness {
 		APIClient: func() (*api.Client, error) {
 			return api.NewClient(api.NewAuthenticator(config.Credential{Method: config.AuthBearer, Token: "t"}), api.WithBaseURL(srv.URL+"/2.0"), api.WithNoRetry(true)), nil
 		},
-		BaseRepo: func() (cmdutil.Repo, error) { return cmdutil.Repo{Workspace: "acme", Slug: "widgets"}, nil },
-		Prompter: stub,
+		BaseRepo:  func() (cmdutil.Repo, error) { return cmdutil.Repo{Workspace: "acme", Slug: "widgets"}, nil },
+		GitClient: func() (*git.Client, error) { return nil, errors.New("git not available in tests") },
+		Prompter:  stub,
 	}
 	return &Harness{Factory: f, Config: cfg, In: in, Out: out, ErrOut: errOut, Server: srv, Mux: mux, Prompt: stub}
 }
