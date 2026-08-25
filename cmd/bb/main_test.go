@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/iostreams"
 )
 
 func TestExitCode(t *testing.T) {
@@ -46,5 +47,23 @@ func TestExitCode(t *testing.T) {
 				t.Errorf("silent error must print nothing: %q", buf.String())
 			}
 		})
+	}
+}
+
+func TestExecute(t *testing.T) {
+	ios, _, out, errOut := iostreams.Test()
+	f := &cmdutil.Factory{IOStreams: ios}
+	if code := execute(context.Background(), f, []string{"version"}); code != 0 || !strings.HasPrefix(out.String(), "bb version") {
+		t.Errorf("version: code=%d out=%q", code, out.String())
+	}
+	out.Reset()
+	if code := execute(context.Background(), f, []string{"no-such-command"}); code != cmdutil.ExitError || !strings.Contains(errOut.String(), "unknown command") {
+		t.Errorf("unknown: code=%d err=%q", code, errOut.String())
+	}
+	errOut.Reset()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if code := execute(ctx, f, []string{"no-such-command"}); code != cmdutil.ExitCancel || !strings.Contains(errOut.String(), "interrupted") {
+		t.Errorf("cancelled ctx: code=%d err=%q", code, errOut.String())
 	}
 }

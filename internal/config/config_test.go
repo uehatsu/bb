@@ -177,3 +177,23 @@ func assertPerm(t *testing.T, path string, want os.FileMode) {
 		t.Errorf("%s perm = %o, want %o", path, fi.Mode().Perm(), want)
 	}
 }
+
+func TestLoadUsesConfigDirAndKeys(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "bb")
+	t.Setenv("BB_CONFIG_DIR", dir)
+	t.Setenv("BB_CREDENTIAL_STORE", "")
+	c, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := c.Credentials().(*FileCredentialStore); !ok {
+		t.Errorf("default store: %T", c.Credentials())
+	}
+	keys := c.Keys()
+	if len(keys) < 5 || keys[0] > keys[1] {
+		t.Errorf("Keys should be sorted and complete: %v", keys)
+	}
+	if (&ErrRefreshFailed{Err: ErrNotFound}).Unwrap() != ErrNotFound {
+		t.Error("ErrRefreshFailed.Unwrap")
+	}
+}

@@ -90,3 +90,18 @@ func TestWebURLs(t *testing.T) {
 		}
 	}
 }
+
+func TestMoreWebURLs(t *testing.T) {
+	if WorkspaceWebURL("acme") != "https://bitbucket.org/acme/" {
+		t.Error(WorkspaceWebURL("acme"))
+	}
+	if PullRequestsWebURL("acme", "w") != "https://bitbucket.org/acme/w/pull-requests/" {
+		t.Error(PullRequestsWebURL("acme", "w"))
+	}
+	if CloneURL(Repo{"a", "b"}, "https") != "https://bitbucket.org/a/b.git" || CloneURL(Repo{"a", "b"}, "ssh") != "git@ssh.bitbucket.org:a/b.git" {
+		t.Error("CloneURL")
+	}
+	if _, ok := NormalizeCloneURL("https://github.com/a/b.git", "https"); ok {
+		t.Error("foreign host must not normalize")
+	}
+}

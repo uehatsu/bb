@@ -57,3 +57,23 @@ func TestRepositoryCloneLinks(t *testing.T) {
 		t.Errorf("roundtrip clone links lost: %s", out)
 	}
 }
+
+func TestSmallHelpers(t *testing.T) {
+	if (Account{Nickname: "n", DisplayName: "d"}).Name() != "n" || (Account{DisplayName: "d"}).Name() != "d" {
+		t.Error("Account.Name")
+	}
+	if (Commit{Hash: "abcdef1234"}).ShortHash() != "abcdef1" || (Commit{Hash: "abc"}).ShortHash() != "abc" {
+		t.Error("ShortHash")
+	}
+	d := DiffStat{}
+	if d.Path() != "" {
+		t.Error("empty diffstat path")
+	}
+	out := RepositoryFields.ExportAll([]Repository{{Slug: "a"}, {Slug: "b"}}, []string{"slug"})
+	if len(out) != 2 || out[1]["slug"] != "b" {
+		t.Errorf("ExportAll: %v", out)
+	}
+	if (PipelineState{}).ResultName() != "" {
+		t.Error("ResultName")
+	}
+}

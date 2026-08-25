@@ -113,3 +113,15 @@ func TestTimeAgo(t *testing.T) {
 		t.Error("singular minute")
 	}
 }
+
+func TestWriteLine(t *testing.T) {
+	var b strings.Builder
+	WriteLine(&b, "a")
+	WriteLine(&b, "b\n")
+	if b.String() != "a\nb\n" {
+		t.Errorf("%q", b.String())
+	}
+	if RuneLen("日本") != 2 {
+		t.Error("RuneLen")
+	}
+}

@@ -95,6 +95,9 @@ func (s *IOStreams) TerminalWidth() int {
 // SetPager sets the pager command (e.g. "less -R"). Empty disables paging.
 func (s *IOStreams) SetPager(cmd string) { s.pagerCmd = cmd }
 
+// Pager returns the configured pager command.
+func (s *IOStreams) Pager() string { return s.pagerCmd }
+
 // StartPager pipes Out through the configured pager when stdout is a TTY.
 func (s *IOStreams) StartPager() error {
 	if s.pagerCmd == "" || !s.stdoutTTY {

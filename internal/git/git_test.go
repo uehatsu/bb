@@ -117,3 +117,39 @@ func asError(err error, target **Error) bool {
 	}
 	return ok
 }
+
+func TestStubRecordsEverything(t *testing.T) {
+	s := NewStub()
+	ctx := context.Background()
+	if _, err := s.CurrentBranch(ctx); err == nil {
+		t.Error("empty Branch should error")
+	}
+	s.Branch = "main"
+	if b, _ := s.CurrentBranch(ctx); b != "main" {
+		t.Error("Branch")
+	}
+	_ = s.ConfigSet(ctx, "--global", "k", "v")
+	_ = s.ConfigAdd(ctx, "", "k", "v2")
+	_ = s.ConfigUnsetAll(ctx, "--global", "k")
+	_ = s.Run(ctx, "status")
+	want := "git config --global --replace-all k v\ngit config --add k v2\ngit config --global --unset-all k\ngit status"
+	if got := strings.Join(s.Calls, "\n"); got != want {
+		t.Errorf("calls:\n%s\nwant:\n%s", got, want)
+	}
+	if (&Error{Args: []string{"x"}, Err: context.Canceled}).Unwrap() != context.Canceled {
+		t.Error("Unwrap")
+	}
+}
+
+func TestRunStreamsToTerminal(t *testing.T) {
+	c := newRepo(t)
+	devnull, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	defer devnull.Close()
+	c.Stdout, c.Stderr = devnull, devnull
+	if err := c.Run(context.Background(), "status"); err != nil {
+		t.Errorf("Run: %v", err)
+	}
+	if err := c.Run(context.Background(), "definitely-not-a-git-command"); err == nil {
+		t.Error("Run must surface failures")
+	}
+}

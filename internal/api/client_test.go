@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -275,5 +276,33 @@ func TestMaskSecrets(t *testing.T) {
 	}
 	if !strings.Contains(got, `"scopes":"x"`) {
 		t.Errorf("non-secret altered: %s", got)
+	}
+}
+
+func TestMaskHeaderAndDoRaw(t *testing.T) {
+	if MaskHeader("Authorization", "Bearer x") != "********" || MaskHeader("Accept", "a") != "a" {
+		t.Error("MaskHeader")
+	}
+	if (errStop{}).Error() == "" || (&HTTPError{StatusCode: 500, Method: "GET", URL: "u"}).Error() == "" {
+		t.Error("error strings")
+	}
+	c, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte("raw body"))
+	}))
+	resp, err := c.DoRaw(context.Background(), Request{Path: "/diff", Accept: "text/plain"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	if string(b) != "raw body" {
+		t.Errorf("DoRaw body: %q", b)
+	}
+	// NoAuth and Apply of the plain authenticator
+	req, _ := http.NewRequest("GET", "https://api.bitbucket.org/2.0/user", nil)
+	NoAuth{}.Apply(req)
+	if req.Header.Get("Authorization") != "" {
+		t.Error("NoAuth must not set a header")
 	}
 }

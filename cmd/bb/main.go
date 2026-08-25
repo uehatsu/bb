@@ -22,14 +22,20 @@ func main() {
 }
 
 func run() int {
-	f := factory.New()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return execute(ctx, factory.New(), os.Args[1:])
+}
+
+// execute builds the command tree for f, runs it with args, and returns the
+// exit status. It is separated from run so tests can drive it with a stub
+// Factory and a cancellable context.
+func execute(ctx context.Context, f *cmdutil.Factory, args []string) int {
 	rootCmd := root.NewCmdRoot(f)
 	rootCmd.SetIn(f.IOStreams.In)
 	rootCmd.SetOut(f.IOStreams.Out)
 	rootCmd.SetErr(f.IOStreams.ErrOut)
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	rootCmd.SetArgs(args)
 	rootCmd.SetContext(ctx)
 	cmd, err := rootCmd.ExecuteC()
 	return exitCode(f.IOStreams.ErrOut, cmd, err, ctx.Err() != nil)
