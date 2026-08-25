@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/spf13/cobra"
 
 	"github.com/uehatsu/bb/internal/api"
+	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
 )
 
@@ -24,21 +26,17 @@ func NewCmdDecline(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title string, state string) error {
-				if state != "OPEN" {
-					return fmt.Errorf("pull request #%d is already %s", prID, state)
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
+				if pr.State != "OPEN" {
+					return fmt.Errorf("pull request #%d is already %s", pr.ID, pr.State)
 				}
-				if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, prID, "decline")}, nil); err != nil {
+				if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, pr.ID, "decline")}, nil); err != nil {
 					return err
 				}
-				fmt.Fprintf(f.IOStreams.ErrOut, "%s Declined pull request #%d (%s)\n", f.IOStreams.ColorScheme().Red("✓"), prID, title)
+				fmt.Fprintf(f.IOStreams.ErrOut, "%s Declined pull request #%d (%s)\n", f.IOStreams.ColorScheme().Red("✓"), pr.ID, pr.Title)
 				if deleteBranch {
-					pr, err := fetchPR(ctx, c, repo, prID)
-					if err != nil {
-						return err
-					}
 					branch := pr.Source.Branch.Name
-					if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: fmt.Sprintf("/repositories/%s/%s/refs/branches/%s", repo.Workspace, repo.Slug, branch)}, nil); err != nil {
+					if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: fmt.Sprintf("/repositories/%s/%s/refs/branches/%s", repo.Workspace, repo.Slug, url.PathEscape(branch))}, nil); err != nil {
 						return fmt.Errorf("declined, but could not delete branch %s: %w", branch, err)
 					}
 					fmt.Fprintf(f.IOStreams.ErrOut, "%s Deleted branch %s\n", f.IOStreams.ColorScheme().Red("✓"), branch)
@@ -58,7 +56,7 @@ func NewCmdReopen(f *cmdutil.Factory) *cobra.Command {
 		Short: "Reopen a pull request (not supported by Bitbucket)",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return errors.New("bitbucket Cloud cannot reopen a declined pull request. Create a new pull request from the same branch instead: `bb pr create`")
+			return errors.New("declined pull requests cannot be reopened on Bitbucket Cloud; create a new pull request from the same branch instead: `bb pr create`")
 		},
 	}
 }
@@ -74,11 +72,11 @@ func NewCmdApprove(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
-				if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, prID, "approve")}, nil); err != nil {
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
+				if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, pr.ID, "approve")}, nil); err != nil {
 					return err
 				}
-				fmt.Fprintf(f.IOStreams.ErrOut, "%s Approved pull request #%d (%s)\n", f.IOStreams.ColorScheme().SuccessIcon(), prID, title)
+				fmt.Fprintf(f.IOStreams.ErrOut, "%s Approved pull request #%d (%s)\n", f.IOStreams.ColorScheme().SuccessIcon(), pr.ID, pr.Title)
 				return nil
 			})
 		},
@@ -96,11 +94,11 @@ func NewCmdUnapprove(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
-				if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: prPath(repo, prID, "approve")}, nil); err != nil {
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
+				if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: prPath(repo, pr.ID, "approve")}, nil); err != nil {
 					return err
 				}
-				fmt.Fprintf(f.IOStreams.ErrOut, "%s Removed approval from pull request #%d (%s)\n", f.IOStreams.ColorScheme().SuccessIcon(), prID, title)
+				fmt.Fprintf(f.IOStreams.ErrOut, "%s Removed approval from pull request #%d (%s)\n", f.IOStreams.ColorScheme().SuccessIcon(), pr.ID, pr.Title)
 				return nil
 			})
 		},
@@ -119,14 +117,16 @@ func NewCmdReady(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
-				if _, err := c.Do(ctx, api.Request{Method: "PUT", Path: prPath(repo, prID, ""), Body: map[string]any{"draft": undo}}, nil); err != nil {
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
+				// Bitbucket's PUT requires the title even for partial updates.
+				body := map[string]any{"title": pr.Title, "draft": undo}
+				if _, err := c.Do(ctx, api.Request{Method: "PUT", Path: prPath(repo, pr.ID, ""), Body: body}, nil); err != nil {
 					return err
 				}
 				if undo {
-					fmt.Fprintf(f.IOStreams.ErrOut, "%s Pull request #%d is marked as draft\n", f.IOStreams.ColorScheme().SuccessIcon(), prID)
+					fmt.Fprintf(f.IOStreams.ErrOut, "%s Pull request #%d is marked as draft\n", f.IOStreams.ColorScheme().SuccessIcon(), pr.ID)
 				} else {
-					fmt.Fprintf(f.IOStreams.ErrOut, "%s Pull request #%d is marked as ready for review\n", f.IOStreams.ColorScheme().SuccessIcon(), prID)
+					fmt.Fprintf(f.IOStreams.ErrOut, "%s Pull request #%d is marked as ready for review\n", f.IOStreams.ColorScheme().SuccessIcon(), pr.ID)
 				}
 				return nil
 			})
@@ -136,9 +136,11 @@ func NewCmdReady(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-// withPR resolves the PR and runs fn with the essentials.
-func withPR(f *cmdutil.Factory, selector string, fn func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error) error {
-	ctx := context.Background()
+// prFunc is the body of a command operating on one resolved pull request.
+type prFunc func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error
+
+// withPR resolves the PR from selector and runs fn.
+func withPR(ctx context.Context, f *cmdutil.Factory, selector string, fn prFunc) error {
 	repo, err := f.BaseRepo()
 	if err != nil {
 		return err
@@ -151,5 +153,5 @@ func withPR(f *cmdutil.Factory, selector string, fn func(ctx context.Context, c 
 	if err != nil {
 		return err
 	}
-	return fn(ctx, client, repo, pr.ID, pr.Title, pr.State)
+	return fn(ctx, client, repo, pr)
 }

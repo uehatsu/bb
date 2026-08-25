@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -22,14 +23,14 @@ func NewCmdStatus(f *cmdutil.Factory) *cobra.Command {
 		Short: "Show authentication status",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(f, showToken)
+			return runStatus(cmd.Context(), f, showToken)
 		},
 	}
 	cmd.Flags().BoolVarP(&showToken, "show-token", "t", false, "Display the token")
 	return cmd
 }
 
-func runStatus(f *cmdutil.Factory, showToken bool) error {
+func runStatus(ctx context.Context, f *cmdutil.Factory, showToken bool) error {
 	io := f.IOStreams
 	cs := io.ColorScheme()
 	cfg, err := f.Config()
@@ -55,7 +56,7 @@ func runStatus(f *cmdutil.Factory, showToken bool) error {
 		return err
 	}
 	var user bitbucket.User
-	if _, err := client.Do(cmdCtx(), api.Request{Path: "/user"}, &user); err != nil {
+	if _, err := client.Do(ctx, api.Request{Path: "/user"}, &user); err != nil {
 		fmt.Fprintf(io.Out, "  %s Token (%s) is invalid: %v\n", cs.FailureIcon(), source, err)
 		if cred.IsExpired(time.Now()) {
 			fmt.Fprintf(io.Out, "  %s The recorded expiry (%s) has passed. Create a new token and run `bb auth login`.\n", cs.WarningIcon(), cred.ExpiresAt.Format("2006-01-02"))
@@ -98,7 +99,7 @@ func runStatus(f *cmdutil.Factory, showToken bool) error {
 	}
 
 	var ws []bitbucket.WorkspaceMembership
-	if err := api.Paginate(cmdCtx(), client, "/user/workspaces", api.ListOptions{Fields: "values.workspace.slug,values.permission,next"}, func(m bitbucket.WorkspaceMembership) error {
+	if err := api.Paginate(ctx, client, "/user/workspaces", api.ListOptions{Fields: "values.workspace.slug,values.permission,next"}, func(m bitbucket.WorkspaceMembership) error {
 		ws = append(ws, m)
 		return nil
 	}); err == nil && len(ws) > 0 {

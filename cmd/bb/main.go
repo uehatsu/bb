@@ -2,9 +2,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/factory"
@@ -22,9 +25,16 @@ func run() int {
 	rootCmd.SetOut(f.IOStreams.Out)
 	rootCmd.SetErr(f.IOStreams.ErrOut)
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	rootCmd.SetContext(ctx)
 	cmd, err := rootCmd.ExecuteC()
 	if err == nil {
 		return cmdutil.ExitOK
+	}
+	if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+		fmt.Fprintln(f.IOStreams.ErrOut, "\nbb: interrupted")
+		return cmdutil.ExitCancel
 	}
 
 	if errors.Is(err, cmdutil.ErrSilent) {

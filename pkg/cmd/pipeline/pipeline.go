@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -152,7 +154,7 @@ func NewCmdList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -218,7 +220,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -257,7 +259,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 
 func fetchSteps(ctx context.Context, c *api.Client, repo cmdutil.Repo, uuid string) ([]bitbucket.PipelineStep, error) {
 	var steps []bitbucket.PipelineStep
-	err := api.Paginate(ctx, c, basePath(repo)+"/"+uuid+"/steps", api.ListOptions{}, func(s bitbucket.PipelineStep) error {
+	err := api.Paginate(ctx, c, basePath(repo)+"/"+uuid+"/steps", api.ListOptions{Fields: "values.uuid,values.name,values.state,values.started_on,values.completed_on,values.duration_in_seconds,next"}, func(s bitbucket.PipelineStep) error {
 		steps = append(steps, s)
 		return nil
 	})
@@ -352,7 +354,7 @@ bitbucket-pipelines.yml, and --var KEY=VALUE to pass pipeline variables.`,
 			if n > 1 {
 				return cmdutil.FlagErrorf("specify only one of --branch or --tag")
 			}
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -361,7 +363,7 @@ bitbucket-pipelines.yml, and --var KEY=VALUE to pass pipeline variables.`,
 			if err != nil {
 				return err
 			}
-			if branch == "" && tag == "" {
+			if branch == "" && tag == "" && commit == "" {
 				if f.GitClient == nil {
 					return cmdutil.FlagErrorf("--branch or --tag is required")
 				}
@@ -374,16 +376,19 @@ bitbucket-pipelines.yml, and --var KEY=VALUE to pass pipeline variables.`,
 					return fmt.Errorf("could not determine current branch: %w", err)
 				}
 			}
-			target := map[string]any{"type": "pipeline_ref_target"}
+			// Bitbucket target shapes: pipeline_ref_target {ref_type, ref_name[, commit]}
+			// or pipeline_commit_target {commit} when only a commit is given.
+			var target map[string]any
 			switch {
+			case commit != "" && !cmd.Flags().Changed("branch") && !cmd.Flags().Changed("tag"):
+				target = map[string]any{"type": "pipeline_commit_target", "commit": map[string]string{"type": "commit", "hash": commit}}
 			case tag != "":
-				target["ref_type"], target["ref_name"] = "tag", tag
+				target = map[string]any{"type": "pipeline_ref_target", "ref_type": "tag", "ref_name": tag}
 			default:
-				target["ref_type"], target["ref_name"] = "branch", branch
+				target = map[string]any{"type": "pipeline_ref_target", "ref_type": "branch", "ref_name": branch}
 			}
-			if commit != "" {
+			if commit != "" && target["type"] == "pipeline_ref_target" {
 				target["commit"] = map[string]string{"type": "commit", "hash": commit}
-				target["type"] = "pipeline_commit_target"
 			}
 			if custom != "" {
 				target["selector"] = map[string]string{"type": "custom", "pattern": custom}
@@ -434,7 +439,7 @@ func NewCmdStop(f *cmdutil.Factory) *cobra.Command {
 		Short:   "Stop a running pipeline",
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -469,7 +474,7 @@ func NewCmdWatch(f *cmdutil.Factory) *cobra.Command {
 		Long:  "Poll a pipeline until it completes. The exit code is 1 when the pipeline did not succeed.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -542,7 +547,7 @@ printed in order; use --step N to select one. With --follow the log is
 tailed (using HTTP Range requests) until the step completes.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -613,21 +618,18 @@ func streamStepLog(ctx context.Context, client *api.Client, repo cmdutil.Repo, p
 			return 0, false, err
 		}
 		defer resp.Body.Close()
-		buf := make([]byte, 32*1024)
-		n := 0
-		for {
-			k, rerr := resp.Body.Read(buf)
-			if k > 0 {
-				if _, werr := out.Write(buf[:k]); werr != nil {
-					return n, false, werr
-				}
-				n += k
-			}
-			if rerr != nil {
-				break
+		if resp.StatusCode == http.StatusOK && offset > 0 {
+			// Server ignored the Range header and returned the whole log:
+			// skip what was already printed.
+			if _, err := io.CopyN(io.Discard, resp.Body, int64(offset)); err != nil && err != io.EOF {
+				return 0, false, err
 			}
 		}
-		return n, true, nil
+		n, err := io.Copy(out, resp.Body)
+		if err != nil {
+			return int(n), false, fmt.Errorf("reading log: %w", err)
+		}
+		return int(n), true, nil
 	}
 	n, _, err := fetch()
 	if err != nil {

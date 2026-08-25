@@ -2,7 +2,6 @@
 package workspace
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -43,7 +42,7 @@ func NewCmdList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			var members []bitbucket.WorkspaceMembership
-			if err := api.Paginate(context.Background(), client, "/user/workspaces", api.ListOptions{Limit: limit, Fields: "values.permission,values.workspace.slug,values.workspace.name,values.workspace.uuid,values.workspace.is_private,values.workspace.is_personal,values.workspace.created_on,values.workspace.links.html.href,next"}, func(m bitbucket.WorkspaceMembership) error {
+			if err := api.Paginate(cmd.Context(), client, "/user/workspaces", api.ListOptions{Limit: limit, Fields: "values.permission,values.workspace.slug,values.workspace.name,values.workspace.uuid,values.workspace.is_private,values.workspace.is_personal,values.workspace.created_on,values.workspace.links.html.href,next"}, func(m bitbucket.WorkspaceMembership) error {
 				members = append(members, m)
 				return nil
 			}); err != nil {
@@ -120,7 +119,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			var w bitbucket.Workspace
-			if _, err := client.Do(context.Background(), api.Request{Path: "/workspaces/" + ws}, &w); err != nil {
+			if _, err := client.Do(cmd.Context(), api.Request{Path: "/workspaces/" + ws}, &w); err != nil {
 				return err
 			}
 			ios := f.IOStreams
@@ -174,7 +173,7 @@ func NewCmdMembers(f *cmdutil.Factory) *cobra.Command {
 			ios := f.IOStreams
 			cs := ios.ColorScheme()
 			tp := output.NewTablePrinter(ios)
-			if err := api.Paginate(context.Background(), client, "/workspaces/"+ws+"/members", api.ListOptions{Limit: limit, Fields: "values.user.nickname,values.user.display_name,values.user.uuid,next"}, func(m bitbucket.WorkspaceMembership) error {
+			if err := api.Paginate(cmd.Context(), client, "/workspaces/"+ws+"/members", api.ListOptions{Limit: limit, Fields: "values.user.nickname,values.user.display_name,values.user.uuid,next"}, func(m bitbucket.WorkspaceMembership) error {
 				tp.AddField(m.User.Nickname, cs.Bold)
 				tp.AddField(m.User.DisplayName, nil)
 				tp.AddField(m.User.UUID, cs.Gray)

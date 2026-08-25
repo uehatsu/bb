@@ -35,7 +35,7 @@ Without an argument, the pull request for the current branch is shown.`,
 			if err != nil {
 				return err
 			}
-			return runView(f, sel, web, comments, exporter)
+			return runView(cmd.Context(), f, sel, web, comments, exporter)
 		},
 	}
 	cmd.Flags().BoolVarP(&web, "web", "w", false, "Open the pull request in the browser")
@@ -55,8 +55,7 @@ func openInBrowser(f *cmdutil.Factory, u string) error {
 	return browser.New(configured).Browse(u)
 }
 
-func runView(f *cmdutil.Factory, selector string, web, withComments bool, exporter *output.Exporter) error {
-	ctx := context.Background()
+func runView(ctx context.Context, f *cmdutil.Factory, selector string, web, withComments bool, exporter *output.Exporter) error {
 	repo, err := f.BaseRepo()
 	if err != nil {
 		return err
@@ -78,7 +77,7 @@ func runView(f *cmdutil.Factory, selector string, web, withComments bool, export
 	}
 	var comments []bitbucket.Comment
 	if withComments {
-		if err := api.Paginate(ctx, client, prPath(repo, pr.ID, "comments"), api.ListOptions{Sort: "created_on"}, func(c bitbucket.Comment) error {
+		if err := api.Paginate(ctx, client, prPath(repo, pr.ID, "comments"), api.ListOptions{Sort: "created_on", Fields: "values.id,values.content.raw,values.user.nickname,values.user.display_name,values.deleted,values.created_on,values.inline,values.links.html.href,next"}, func(c bitbucket.Comment) error {
 			if !c.Deleted {
 				comments = append(comments, c)
 			}

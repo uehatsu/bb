@@ -37,7 +37,7 @@ required when forking into the same workspace.`,
 			if workspace == "" {
 				return cmdutil.FlagErrorf("--workspace is required (or set a default with `bb config set workspace`)")
 			}
-			return runFork(f, repo, workspace, name, clone)
+			return runFork(cmd.Context(), f, repo, workspace, name, clone)
 		},
 	}
 	cmd.Flags().StringVarP(&workspace, "workspace", "w", "", "Workspace to create the fork in")
@@ -47,8 +47,7 @@ required when forking into the same workspace.`,
 	return cmd
 }
 
-func runFork(f *cmdutil.Factory, repo cmdutil.Repo, workspace, name string, clone bool) error {
-	ctx := context.Background()
+func runFork(ctx context.Context, f *cmdutil.Factory, repo cmdutil.Repo, workspace, name string, clone bool) error {
 	client, err := f.APIClient()
 	if err != nil {
 		return err

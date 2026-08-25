@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strings"
@@ -61,7 +62,7 @@ repository's effective default reviewers are added automatically unless
 				}
 				opts.Body = b
 			}
-			return runCreate(f, opts)
+			return runCreate(cmd.Context(), f, opts)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Title, "title", "t", "", "Title for the pull request")
@@ -78,18 +79,13 @@ repository's effective default reviewers are added automatically unless
 	return cmd
 }
 
-func readBodyFile(path string, stdin interface{ Read([]byte) (int, error) }) (string, error) {
+func readBodyFile(path string, stdin io.Reader) (string, error) {
 	if path == "-" {
-		var b strings.Builder
-		buf := make([]byte, 4096)
-		for {
-			n, err := stdin.Read(buf)
-			b.Write(buf[:n])
-			if err != nil {
-				break
-			}
+		b, err := io.ReadAll(stdin)
+		if err != nil {
+			return "", err
 		}
-		return b.String(), nil
+		return string(b), nil
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -98,8 +94,7 @@ func readBodyFile(path string, stdin interface{ Read([]byte) (int, error) }) (st
 	return string(b), nil
 }
 
-func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
-	ctx := context.Background()
+func runCreate(ctx context.Context, f *cmdutil.Factory, opts *CreateOptions) error {
 	ios := f.IOStreams
 	cs := ios.ColorScheme()
 	repo, err := f.BaseRepo()
@@ -250,12 +245,15 @@ func resolveReviewers(ctx context.Context, client *api.Client, repo cmdutil.Repo
 		}
 	}
 	if includeDefaults {
-		_ = api.Paginate(ctx, client, fmt.Sprintf("/repositories/%s/%s/effective-default-reviewers", repo.Workspace, repo.Slug), api.ListOptions{Fields: "values.user.uuid,next"}, func(p struct {
+		err := api.Paginate(ctx, client, fmt.Sprintf("/repositories/%s/%s/effective-default-reviewers", repo.Workspace, repo.Slug), api.ListOptions{Fields: "values.user.uuid,next"}, func(p struct {
 			User bitbucket.Account `json:"user"`
 		}) error {
 			add(p.User.UUID)
 			return nil
 		})
+		if err != nil {
+			return nil, fmt.Errorf("fetching default reviewers (use --no-default-reviewers to skip): %w", err)
+		}
 	}
 	if len(nicknames) == 0 {
 		return out, nil

@@ -2,6 +2,7 @@ package cmdutil
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -45,13 +46,16 @@ func repoFromArg(f *Factory, arg string) (Repo, error) {
 
 // RepoFromRemotes resolves the repository from the current git remotes.
 func RepoFromRemotes(f *Factory) (Repo, error) {
+	if f.GitClient == nil {
+		return Repo{}, gitctx.ErrNoRemote
+	}
 	g, err := f.GitClient()
 	if err != nil {
-		return Repo{}, gitctx.ErrNoRemote
+		return Repo{}, fmt.Errorf("%w (%v)", gitctx.ErrNoRemote, err)
 	}
 	remotes, err := g.Remotes(context.Background())
 	if err != nil {
-		return Repo{}, gitctx.ErrNoRemote
+		return Repo{}, fmt.Errorf("%w (%v)", gitctx.ErrNoRemote, err)
 	}
 	var parsed []gitctx.Remote
 	for _, r := range remotes {

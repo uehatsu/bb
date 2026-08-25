@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -12,8 +11,6 @@ import (
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/config"
 )
-
-func cmdCtx() context.Context { return context.Background() }
 
 // NewCmdToken prints the stored token (for scripting).
 func NewCmdToken(f *cmdutil.Factory) *cobra.Command {

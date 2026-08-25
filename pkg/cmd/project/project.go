@@ -2,7 +2,6 @@
 package project
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -70,7 +69,7 @@ func NewCmdList(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			var projects []bitbucket.Project
-			if err := api.Paginate(context.Background(), client, "/workspaces/"+ws+"/projects", api.ListOptions{Limit: limit, Fields: projectFields, Sort: "name"}, func(p bitbucket.Project) error {
+			if err := api.Paginate(cmd.Context(), client, "/workspaces/"+ws+"/projects", api.ListOptions{Limit: limit, Fields: projectFields, Sort: "name"}, func(p bitbucket.Project) error {
 				projects = append(projects, p)
 				return nil
 			}); err != nil {
@@ -126,7 +125,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			var p bitbucket.Project
-			if _, err := client.Do(context.Background(), api.Request{Path: "/workspaces/" + ws + "/projects/" + key}, &p); err != nil {
+			if _, err := client.Do(cmd.Context(), api.Request{Path: "/workspaces/" + ws + "/projects/" + key}, &p); err != nil {
 				return err
 			}
 			ios := f.IOStreams
@@ -183,7 +182,7 @@ func NewCmdCreate(f *cmdutil.Factory) *cobra.Command {
 				body["description"] = description
 			}
 			var created bitbucket.Project
-			if _, err := client.Do(context.Background(), api.Request{Method: "POST", Path: "/workspaces/" + ws + "/projects", Body: body}, &created); err != nil {
+			if _, err := client.Do(cmd.Context(), api.Request{Method: "POST", Path: "/workspaces/" + ws + "/projects", Body: body}, &created); err != nil {
 				return err
 			}
 			fmt.Fprintf(f.IOStreams.ErrOut, "%s Created project %s (%s) in %s\n", f.IOStreams.ColorScheme().SuccessIcon(), created.Name, created.Key, ws)

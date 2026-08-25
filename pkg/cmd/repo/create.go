@@ -72,7 +72,7 @@ workspace's oldest project.`,
 					return cmdutil.FlagErrorf("--private or --public is required when not running interactively")
 				}
 			}
-			return runCreate(f, opts)
+			return runCreate(cmd.Context(), f, opts)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Workspace, "workspace", "w", "", "Workspace to create the repository in")
@@ -102,8 +102,7 @@ func promptCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 	return nil
 }
 
-func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
-	ctx := context.Background()
+func runCreate(ctx context.Context, f *cmdutil.Factory, opts *CreateOptions) error {
 	ios := f.IOStreams
 	ws := opts.Workspace
 	name := opts.Name

@@ -21,13 +21,12 @@ func NewCmdStatus(f *cmdutil.Factory) *cobra.Command {
 		Long:  "Show the pull request for the current branch, your open pull requests, and pull requests awaiting your review.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runStatus(f)
+			return runStatus(cmd.Context(), f)
 		},
 	}
 }
 
-func runStatus(f *cmdutil.Factory) error {
-	ctx := context.Background()
+func runStatus(ctx context.Context, f *cmdutil.Factory) error {
 	ios := f.IOStreams
 	cs := ios.ColorScheme()
 	repo, err := f.BaseRepo()

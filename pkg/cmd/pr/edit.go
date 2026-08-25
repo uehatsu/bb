@@ -1,7 +1,6 @@
 package pr
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -38,7 +37,7 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -51,7 +50,8 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			payload := map[string]any{}
+			// Bitbucket's PUT requires the title even for partial updates.
+			payload := map[string]any{"title": pr.Title}
 			if cmd.Flags().Changed("title") {
 				payload["title"] = title
 			}

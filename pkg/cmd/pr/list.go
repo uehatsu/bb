@@ -43,7 +43,7 @@ func NewCmdList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runList(f, opts, exporter)
+			return runList(cmd.Context(), f, opts, exporter)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.State, "state", "s", "open", "Filter by state: {open|merged|declined|superseded|all}")
@@ -74,8 +74,7 @@ func stateParams(state string) ([]string, error) {
 	return nil, cmdutil.FlagErrorf("invalid --state %q (open|merged|declined|superseded|all)", state)
 }
 
-func runList(f *cmdutil.Factory, opts *ListOptions, exporter *output.Exporter) error {
-	ctx := context.Background()
+func runList(ctx context.Context, f *cmdutil.Factory, opts *ListOptions, exporter *output.Exporter) error {
 	repo, err := f.BaseRepo()
 	if err != nil {
 		return err

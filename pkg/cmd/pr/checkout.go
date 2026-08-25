@@ -25,7 +25,7 @@ For pull requests from forks, a remote named after the fork's workspace is
 added and the branch is fetched from it.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runCheckout(f, args[0], branchName, force, detach)
+			return runCheckout(cmd.Context(), f, args[0], branchName, force, detach)
 		},
 	}
 	cmd.Flags().StringVarP(&branchName, "branch", "b", "", "Local branch name to use (default: the source branch name)")
@@ -34,8 +34,7 @@ added and the branch is fetched from it.`,
 	return cmd
 }
 
-func runCheckout(f *cmdutil.Factory, selector, localBranch string, force, detach bool) error {
-	ctx := context.Background()
+func runCheckout(ctx context.Context, f *cmdutil.Factory, selector, localBranch string, force, detach bool) error {
 	repo, err := f.BaseRepo()
 	if err != nil {
 		return err

@@ -2,7 +2,6 @@
 package branch
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"time"
@@ -51,7 +50,7 @@ func NewCmdList(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -120,7 +119,7 @@ func NewCmdCreate(f *cmdutil.Factory) *cobra.Command {
 		Long:  "Create a branch from a commit hash or another branch (default: the repository's main branch).",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err
@@ -164,7 +163,7 @@ func NewCmdDelete(f *cmdutil.Factory) *cobra.Command {
 		Short: "Delete a branch on Bitbucket",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+			ctx := cmd.Context()
 			repo, err := f.BaseRepo()
 			if err != nil {
 				return err

@@ -29,24 +29,30 @@ failed.`,
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
-				for {
-					statuses, err := fetchStatuses(ctx, c, repo, prID)
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
+				var pending, failed int
+				report := func(ctx context.Context) (bool, error) {
+					statuses, err := fetchStatuses(ctx, c, repo, pr.ID)
 					if err != nil {
+						return false, err
+					}
+					pending, failed = printChecks(f, statuses)
+					return pending == 0, nil
+				}
+				if watch {
+					if err := api.Poll(ctx, api.PollOptions{Initial: interval, Max: interval, Factor: 1}, report); err != nil {
 						return err
 					}
-					pending, failed := printChecks(f, statuses)
-					if !watch || pending == 0 {
-						if failed > 0 {
-							return cmdutil.ErrSilent
-						}
-						if pending > 0 {
-							return cmdutil.ErrPending
-						}
-						return nil
-					}
-					time.Sleep(interval)
+				} else if _, err := report(ctx); err != nil {
+					return err
 				}
+				if failed > 0 {
+					return cmdutil.ErrSilent
+				}
+				if pending > 0 {
+					return cmdutil.ErrPending
+				}
+				return nil
 			})
 		},
 	}
@@ -57,7 +63,7 @@ failed.`,
 
 func fetchStatuses(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int) ([]bitbucket.CommitStatus, error) {
 	var out []bitbucket.CommitStatus
-	err := api.Paginate(ctx, c, prPath(repo, prID, "statuses"), api.ListOptions{}, func(s bitbucket.CommitStatus) error {
+	err := api.Paginate(ctx, c, prPath(repo, prID, "statuses"), api.ListOptions{Fields: "values.key,values.name,values.state,values.description,values.url,next"}, func(s bitbucket.CommitStatus) error {
 		out = append(out, s)
 		return nil
 	})

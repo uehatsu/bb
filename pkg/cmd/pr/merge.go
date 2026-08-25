@@ -66,7 +66,7 @@ merge task until it completes (see --timeout).`,
 			if opts.Strategy != "" && !mergeStrategies[opts.Strategy] {
 				return cmdutil.FlagErrorf("invalid --strategy %q", opts.Strategy)
 			}
-			return runMerge(f, opts)
+			return runMerge(cmd.Context(), f, opts)
 		},
 	}
 	cmd.Flags().BoolVarP(&opts.MergeCommit, "merge", "m", false, "Merge with a merge commit")
@@ -82,8 +82,7 @@ merge task until it completes (see --timeout).`,
 	return cmd
 }
 
-func runMerge(f *cmdutil.Factory, opts *MergeOptions) error {
-	ctx := context.Background()
+func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error {
 	ios := f.IOStreams
 	cs := ios.ColorScheme()
 	repo, err := f.BaseRepo()

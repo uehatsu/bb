@@ -59,7 +59,7 @@ Note: Bitbucket removed the cross-workspace repository listing API in 2026, so
 			if err != nil {
 				return err
 			}
-			return runList(f, opts, exporter)
+			return runList(cmd.Context(), f, opts, exporter)
 		},
 	}
 	cmd.Flags().StringVar(&opts.Role, "role", "", "Filter by the user's role: {contributor|admin|owner}")
@@ -72,8 +72,7 @@ Note: Bitbucket removed the cross-workspace repository listing API in 2026, so
 	return cmd
 }
 
-func runList(f *cmdutil.Factory, opts *ListOptions, exporter *output.Exporter) error {
-	ctx := context.Background()
+func runList(ctx context.Context, f *cmdutil.Factory, opts *ListOptions, exporter *output.Exporter) error {
 	client, err := f.APIClient()
 	if err != nil {
 		return err

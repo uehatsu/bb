@@ -66,7 +66,7 @@ func ParseRemoteURL(raw string) (Repo, bool) {
 	path = strings.Trim(path, "/")
 	path = strings.TrimSuffix(path, ".git")
 	parts := strings.Split(path, "/")
-	if len(parts) < 2 || parts[0] == "" || parts[1] == "" {
+	if len(parts) < 2 || !ValidName(parts[0]) || !ValidName(parts[1]) {
 		return Repo{}, false
 	}
 	return Repo{Workspace: parts[0], Slug: parts[1]}, true

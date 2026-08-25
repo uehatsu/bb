@@ -39,7 +39,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return runView(f, repo, branch, web, exporter)
+			return runView(cmd.Context(), f, repo, branch, web, exporter)
 		},
 	}
 	cmd.Flags().BoolVarP(&web, "web", "w", false, "Open the repository in the browser")
@@ -49,8 +49,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 	return cmd
 }
 
-func runView(f *cmdutil.Factory, repo cmdutil.Repo, branch string, web bool, exporter *output.Exporter) error {
-	ctx := context.Background()
+func runView(ctx context.Context, f *cmdutil.Factory, repo cmdutil.Repo, branch string, web bool, exporter *output.Exporter) error {
 	ios := f.IOStreams
 	if web {
 		u := "https://bitbucket.org/" + repo.FullName()

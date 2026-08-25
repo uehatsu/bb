@@ -141,7 +141,7 @@ func TestStatusAndLogout(t *testing.T) {
 	f, cfg, _, out, _ := testFactory(t, userHandler(t, "Basic "))
 	soon := time.Now().Add(2 * 24 * time.Hour)
 	_ = cfg.Credentials().Set(config.DefaultHost, config.Credential{Method: config.AuthAPIToken, Email: "me@example.com", Token: "ATATT1234567890", ExpiresAt: &soon})
-	if err := runStatus(f, false); err != nil {
+	if err := runStatus(t.Context(), f, false); err != nil {
 		t.Fatal(err)
 	}
 	s := out.String()
@@ -162,7 +162,7 @@ func TestStatusAndLogout(t *testing.T) {
 		t.Error("logout should delete credential")
 	}
 	out.Reset()
-	if err := runStatus(f, false); err != cmdutil.ErrSilent || !strings.Contains(out.String(), "Not logged in") {
+	if err := runStatus(t.Context(), f, false); err != cmdutil.ErrSilent || !strings.Contains(out.String(), "Not logged in") {
 		t.Errorf("status after logout: %v %s", err, out.String())
 	}
 }

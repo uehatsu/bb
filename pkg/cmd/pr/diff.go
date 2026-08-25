@@ -32,12 +32,13 @@ func NewCmdDiff(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				ios := f.IOStreams
+				prID := pr.ID
 				useColor := color == "always" || (color == "auto" && ios.ColorEnabled())
 				if nameOnly || stat {
 					var entries []bitbucket.DiffStat
-					if err := api.Paginate(ctx, c, prPath(repo, prID, "diffstat"), api.ListOptions{}, func(d bitbucket.DiffStat) error {
+					if err := api.Paginate(ctx, c, prPath(repo, prID, "diffstat"), api.ListOptions{Fields: "values.status,values.lines_added,values.lines_removed,values.old.path,values.new.path,next"}, func(d bitbucket.DiffStat) error {
 						entries = append(entries, d)
 						return nil
 					}); err != nil {

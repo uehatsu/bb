@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -46,7 +45,7 @@ needs the delete:repository:bitbucket scope.`,
 			if err != nil {
 				return err
 			}
-			if _, err := client.Do(context.Background(), api.Request{Method: "DELETE", Path: fmt.Sprintf("/repositories/%s/%s", repo.Workspace, repo.Slug)}, nil); err != nil {
+			if _, err := client.Do(cmd.Context(), api.Request{Method: "DELETE", Path: fmt.Sprintf("/repositories/%s/%s", repo.Workspace, repo.Slug)}, nil); err != nil {
 				return err
 			}
 			fmt.Fprintf(f.IOStreams.ErrOut, "%s Deleted repository %s\n", f.IOStreams.ColorScheme().SuccessIcon(), repo.FullName())

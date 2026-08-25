@@ -52,8 +52,9 @@ in addition to the review action.`,
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				cs := f.IOStreams.ColorScheme()
+				prID := pr.ID
 				if strings.TrimSpace(body) != "" {
 					if _, err := postComment(ctx, c, repo, prID, body); err != nil {
 						return err
@@ -125,7 +126,8 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 			if len(args) > 0 {
 				sel = args[0]
 			}
-			return withPR(f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, prID int, title, state string) error {
+			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
+				prID := pr.ID
 				var created *bitbucket.Comment
 				var err error
 				if path != "" {

@@ -126,7 +126,7 @@ func TestDeclineApproveUnapproveReady(t *testing.T) {
 	}
 	var putBody string
 	h.Mux.HandleFunc("/2.0/repositories/acme/widgets/pullrequests/42/", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(404) })
-	h.Handle("/repositories/acme/widgets/refs/branches/feat/login", func(w http.ResponseWriter, r *http.Request) {
+	h.Handle("/repositories/acme/widgets/refs/branches/feat%2Flogin", func(w http.ResponseWriter, r *http.Request) {
 		calls["branch-delete"] = r.Method
 		w.WriteHeader(204)
 	})
@@ -162,17 +162,17 @@ func TestDeclineApproveUnapproveReady(t *testing.T) {
 	rd := NewCmdReady(h2.Factory)
 	rd.SetArgs([]string{"42"})
 	run(rd)
-	if putBody != `{"draft":false}` {
+	if putBody != `{"draft":false,"title":"Fix login"}` {
 		t.Errorf("ready body: %s", putBody)
 	}
 	rd = NewCmdReady(h2.Factory)
 	rd.SetArgs([]string{"42", "--undo"})
 	run(rd)
-	if putBody != `{"draft":true}` {
+	if putBody != `{"draft":true,"title":"Fix login"}` {
 		t.Errorf("undo body: %s", putBody)
 	}
 
-	if err := NewCmdReopen(h2.Factory).Execute(); err == nil || !strings.Contains(err.Error(), "cannot reopen") {
+	if err := NewCmdReopen(h2.Factory).Execute(); err == nil || !strings.Contains(err.Error(), "cannot be reopened") {
 		t.Errorf("reopen: %v", err)
 	}
 }

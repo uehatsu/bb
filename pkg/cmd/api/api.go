@@ -4,6 +4,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -72,7 +73,7 @@ With --paginate, all pages are fetched by following "next" links and the
 			if opts.InputFile != "" && (len(opts.Fields) > 0 || len(opts.RawFields) > 0) {
 				return cmdutil.FlagErrorf("--input cannot be combined with --field/--raw-field")
 			}
-			return run(f, opts)
+			return run(cmd.Context(), f, opts)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.Method, "method", "X", "", "The HTTP method for the request (default GET, or POST with fields)")
@@ -89,7 +90,7 @@ With --paginate, all pages are fetched by following "next" links and the
 	return cmd
 }
 
-func run(f *cmdutil.Factory, opts *Options) error {
+func run(ctx context.Context, f *cmdutil.Factory, opts *Options) error {
 	ios := f.IOStreams
 	client, err := f.APIClient()
 	if err != nil {
@@ -143,7 +144,6 @@ func run(f *cmdutil.Factory, opts *Options) error {
 		}
 	}
 
-	ctx := cmdCtx()
 	if opts.Paginate {
 		var all []json.RawMessage
 		err := bbapi.Paginate(ctx, client, path, bbapi.ListOptions{Extra: req.Query}, func(v json.RawMessage) error {

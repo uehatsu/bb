@@ -1,7 +1,6 @@
 package repo
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -66,7 +65,7 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			var updated bitbucket.Repository
-			if _, err := client.Do(context.Background(), api.Request{Method: "PUT", Path: fmt.Sprintf("/repositories/%s/%s", repo.Workspace, repo.Slug), Body: body}, &updated); err != nil {
+			if _, err := client.Do(cmd.Context(), api.Request{Method: "PUT", Path: fmt.Sprintf("/repositories/%s/%s", repo.Workspace, repo.Slug), Body: body}, &updated); err != nil {
 				return err
 			}
 			fmt.Fprintf(f.IOStreams.ErrOut, "%s Edited repository %s\n", f.IOStreams.ColorScheme().SuccessIcon(), updated.FullName)
