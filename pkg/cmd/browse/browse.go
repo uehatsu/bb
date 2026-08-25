@@ -3,7 +3,6 @@ package browse
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -85,7 +84,7 @@ func BuildURL(repo cmdutil.Repo, opts *Options) (string, error) {
 	if !gitctx.ValidName(repo.Workspace) || !gitctx.ValidName(repo.Slug) {
 		return "", fmt.Errorf("invalid repository %q", repo.FullName())
 	}
-	base := "https://bitbucket.org/" + url.PathEscape(repo.Workspace) + "/" + url.PathEscape(repo.Slug)
+	base := gitctx.RepoWebURL(repo.Workspace, repo.Slug)
 	switch {
 	case opts.Settings:
 		return base + "/admin", nil
@@ -103,12 +102,12 @@ func BuildURL(repo cmdutil.Repo, opts *Options) (string, error) {
 	}
 	if opts.Selector == "" {
 		if opts.Branch != "" {
-			return base + "/branch/" + escapePath(opts.Branch), nil
+			return gitctx.BranchWebURL(repo.Workspace, repo.Slug, opts.Branch), nil
 		}
 		return base, nil
 	}
 	if n, err := strconv.Atoi(opts.Selector); err == nil && n > 0 {
-		return fmt.Sprintf("%s/pull-requests/%d", base, n), nil
+		return gitctx.PullRequestWebURL(repo.Workspace, repo.Slug, n), nil
 	}
 	p, line := splitLine(opts.Selector)
 	if strings.HasPrefix(p, "/") || strings.Contains(p, "..") {
@@ -118,19 +117,11 @@ func BuildURL(repo cmdutil.Repo, opts *Options) (string, error) {
 	if ref == "" {
 		ref = "HEAD"
 	}
-	u := base + "/src/" + escapePath(ref) + "/" + escapePath(p)
+	u := base + "/src/" + gitctx.EscapePath(ref) + "/" + gitctx.EscapePath(p)
 	if line != "" {
 		u += "#lines-" + line
 	}
 	return u, nil
-}
-
-func escapePath(p string) string {
-	parts := strings.Split(p, "/")
-	for i, s := range parts {
-		parts[i] = url.PathEscape(s)
-	}
-	return strings.Join(parts, "/")
 }
 
 // splitLine separates "path:12" or "path:12-20" into path and line spec.

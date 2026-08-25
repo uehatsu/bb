@@ -11,6 +11,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/gitctx"
 	"github.com/uehatsu/bb/internal/output"
 )
 
@@ -80,7 +81,7 @@ func runList(ctx context.Context, f *cmdutil.Factory, opts *ListOptions, exporte
 		return err
 	}
 	if opts.Web {
-		return cmdutil.OpenBrowser(f, "https://bitbucket.org/"+repo.FullName()+"/pull-requests/")
+		return cmdutil.OpenBrowser(f, gitctx.PullRequestsWebURL(repo.Workspace, repo.Slug))
 	}
 	states, err := stateParams(opts.State)
 	if err != nil {

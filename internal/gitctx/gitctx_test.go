@@ -64,3 +64,29 @@ func TestPickRemote(t *testing.T) {
 		t.Error("expected ErrNoRemote")
 	}
 }
+
+func TestWebURLs(t *testing.T) {
+	if RepoWebURL("acme", "widgets") != "https://bitbucket.org/acme/widgets" {
+		t.Error(RepoWebURL("acme", "widgets"))
+	}
+	if PullRequestWebURL("acme", "widgets", 42) != "https://bitbucket.org/acme/widgets/pull-requests/42" {
+		t.Error("pr url")
+	}
+	if PipelineWebURL("acme", "widgets", 7) != "https://bitbucket.org/acme/widgets/pipelines/results/7" {
+		t.Error("pipeline url")
+	}
+	if got := NewPullRequestWebURL("acme", "widgets", "feat/x", "main", "Hi there"); got != "https://bitbucket.org/acme/widgets/pull-requests/new?dest=main&source=feat%2Fx&title=Hi+there" {
+		t.Error(got)
+	}
+	if BranchWebURL("acme", "widgets", "feat/日本") != "https://bitbucket.org/acme/widgets/branch/feat/%E6%97%A5%E6%9C%AC" {
+		t.Error(BranchWebURL("acme", "widgets", "feat/日本"))
+	}
+	if r, ok := ParseFullName("acme/widgets"); !ok || r.Slug != "widgets" {
+		t.Error("ParseFullName")
+	}
+	for _, bad := range []string{"acme", "a/b/c", "../x/y", "", "acme/"} {
+		if _, ok := ParseFullName(bad); ok {
+			t.Errorf("%q should fail", bad)
+		}
+	}
+}

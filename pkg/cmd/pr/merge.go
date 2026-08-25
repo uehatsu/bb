@@ -179,7 +179,7 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 	}
 
 	if merged == nil {
-		if merged, err = fetchPR(ctx, client, repo, pr.ID); err != nil {
+		if merged, err = fetchPR(ctx, client, repo, pr.ID, "id,state,title"); err != nil {
 			return err
 		}
 	}

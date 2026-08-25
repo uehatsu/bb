@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/uehatsu/bb/internal/browser"
+	"github.com/uehatsu/bb/internal/gitctx"
 )
 
 // OpenBrowser opens u in the user's browser, honoring the configured command.
@@ -28,7 +29,12 @@ func OpenBrowser(f *Factory, u string) error {
 	return browser.New(configured).Browse(u)
 }
 
+var webHost = func() string {
+	u, _ := url.Parse(gitctx.WebBase)
+	return strings.ToLower(u.Hostname())
+}()
+
 func isBitbucketWebHost(h string) bool {
 	h = strings.ToLower(h)
-	return h == "bitbucket.org" || strings.HasSuffix(h, ".bitbucket.org")
+	return h == webHost || strings.HasSuffix(h, "."+webHost)
 }

@@ -84,7 +84,7 @@ func cloneRepo(ctx context.Context, f *cmdutil.Factory, r *bitbucket.Repository,
 		if target == "" {
 			target = path.Base(strings.TrimSuffix(u, ".git"))
 		}
-		parent, ok := gitctx.ParseRemoteURL("https://bitbucket.org/" + r.Parent.FullName)
+		parent, ok := gitctx.ParseFullName(r.Parent.FullName)
 		if !ok {
 			fmt.Fprintf(f.IOStreams.ErrOut, "warning: unexpected parent repository %q; upstream remote not added\n", r.Parent.FullName)
 			return nil

@@ -16,6 +16,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/gitctx"
 	"github.com/uehatsu/bb/internal/iostreams"
 	"github.com/uehatsu/bb/internal/output"
 )
@@ -106,6 +107,15 @@ func statusColor(cs *iostreams.ColorScheme, p *bitbucket.Pipeline) func(string) 
 }
 
 func isDone(p *bitbucket.Pipeline) bool { return p.State.Name == "COMPLETED" }
+
+// pipelineURL prefers the server-provided html link and falls back to the
+// canonical results page.
+func pipelineURL(repo cmdutil.Repo, p *bitbucket.Pipeline) string {
+	if u := p.Links.HTML(); u != "" {
+		return u
+	}
+	return gitctx.PipelineWebURL(repo.Workspace, repo.Slug, p.BuildNumber)
+}
 
 func printPipelineRow(tp *output.TablePrinter, cs *iostreams.ColorScheme, p *bitbucket.Pipeline, now time.Time) {
 	tp.AddField(fmt.Sprintf("#%d", p.BuildNumber), cs.Bold)
@@ -224,11 +234,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 			}
 			ios := f.IOStreams
 			if web {
-				u := p.Links.HTML()
-				if u == "" {
-					u = fmt.Sprintf("https://bitbucket.org/%s/pipelines/results/%d", repo.FullName(), p.BuildNumber)
-				}
-				return cmdutil.OpenBrowser(f, u)
+				return cmdutil.OpenBrowser(f, pipelineURL(repo, p))
 			}
 			if exporter != nil {
 				return exporter.Write(ios, bitbucket.PipelineFields.Export(*p, exporter.Fields))
@@ -311,11 +317,7 @@ func printPipeline(f *cmdutil.Factory, repo cmdutil.Repo, p *bitbucket.Pipeline,
 		_ = tp.Render()
 	}
 	fmt.Fprintln(ios.Out)
-	u := p.Links.HTML()
-	if u == "" {
-		u = fmt.Sprintf("https://bitbucket.org/%s/pipelines/results/%d", repo.FullName(), p.BuildNumber)
-	}
-	fmt.Fprintln(ios.Out, cs.Gray("View this pipeline on Bitbucket: "+u))
+	fmt.Fprintln(ios.Out, cs.Gray("View this pipeline on Bitbucket: "+pipelineURL(repo, p)))
 }
 
 // NewCmdRun returns `pipeline run`.
@@ -400,11 +402,7 @@ bitbucket-pipelines.yml, and --var KEY=VALUE to pass pipeline variables.`,
 			}
 			cs := f.IOStreams.ColorScheme()
 			fmt.Fprintf(f.IOStreams.ErrOut, "%s Started pipeline #%d for %s\n", cs.SuccessIcon(), created.BuildNumber, created.Target.RefName)
-			u := created.Links.HTML()
-			if u == "" {
-				u = fmt.Sprintf("https://bitbucket.org/%s/pipelines/results/%d", repo.FullName(), created.BuildNumber)
-			}
-			fmt.Fprintln(f.IOStreams.Out, u)
+			fmt.Fprintln(f.IOStreams.Out, pipelineURL(repo, &created))
 			if watch {
 				return watchPipeline(ctx, f, client, repo, created.UUID, 0, 0, true)
 			}

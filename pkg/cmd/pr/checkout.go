@@ -67,7 +67,7 @@ func runCheckout(ctx context.Context, f *cmdutil.Factory, selector, localBranch 
 	if isFork {
 		// The PR's source.repository is a short reference without a
 		// workspace object; derive the workspace from full_name.
-		forkRepo, ok := gitctx.ParseRemoteURL("https://bitbucket.org/" + pr.Source.Repository.FullName)
+		forkRepo, ok := gitctx.ParseFullName(pr.Source.Repository.FullName)
 		if !ok {
 			return fmt.Errorf("unexpected fork repository name %q", pr.Source.Repository.FullName)
 		}

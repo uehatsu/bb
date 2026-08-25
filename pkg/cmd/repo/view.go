@@ -12,6 +12,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/gitctx"
 	"github.com/uehatsu/bb/internal/output"
 )
 
@@ -48,9 +49,9 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 func runView(ctx context.Context, f *cmdutil.Factory, repo cmdutil.Repo, branch string, web bool, exporter *output.Exporter) error {
 	ios := f.IOStreams
 	if web {
-		u := "https://bitbucket.org/" + repo.FullName()
+		u := gitctx.RepoWebURL(repo.Workspace, repo.Slug)
 		if branch != "" {
-			u += "/branch/" + branch
+			u = gitctx.BranchWebURL(repo.Workspace, repo.Slug, branch)
 		}
 		return cmdutil.OpenBrowser(f, u)
 	}

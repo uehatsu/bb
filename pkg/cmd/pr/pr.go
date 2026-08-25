@@ -51,6 +51,10 @@ func NewCmdPR(f *cmdutil.Factory) *cobra.Command {
 
 const prListFields = "values.id,values.title,values.state,values.draft,values.author.nickname,values.author.display_name,values.author.uuid,values.source.branch.name,values.source.repository.full_name,values.destination.branch.name,values.updated_on,values.created_on,values.comment_count,values.task_count,values.close_source_branch,values.links.html.href,next"
 
+// prCoreFields is enough for every action command (approve, merge, decline,
+// checkout, ...). `pr view` fetches the full object instead.
+const prCoreFields = "id,title,description,state,draft,author,source.branch.name,source.repository.full_name,source.repository.uuid,destination.branch.name,destination.repository.full_name,close_source_branch,reviewers,participants,comment_count,task_count,created_on,updated_on,merge_commit.hash,links.html.href"
+
 func prPath(repo cmdutil.Repo, id int, suffix string) string {
 	p := fmt.Sprintf("/repositories/%s/%s/pullrequests", repo.Workspace, repo.Slug)
 	if id > 0 {
@@ -62,10 +66,15 @@ func prPath(repo cmdutil.Repo, id int, suffix string) string {
 	return p
 }
 
-// fetchPR gets a PR by number.
-func fetchPR(ctx context.Context, client *api.Client, repo cmdutil.Repo, id int) (*bitbucket.PullRequest, error) {
+// fetchPR gets a PR by number with the core fields; pass fields="" for the
+// full object.
+func fetchPR(ctx context.Context, client *api.Client, repo cmdutil.Repo, id int, fields string) (*bitbucket.PullRequest, error) {
 	var pr bitbucket.PullRequest
-	if _, err := client.Do(ctx, api.Request{Path: prPath(repo, id, "")}, &pr); err != nil {
+	req := api.Request{Path: prPath(repo, id, "")}
+	if fields != "" {
+		req.Query = map[string][]string{"fields": {fields}}
+	}
+	if _, err := client.Do(ctx, req, &pr); err != nil {
 		var herr *api.HTTPError
 		if errors.As(err, &herr) && herr.IsNotFound() {
 			return nil, fmt.Errorf("pull request #%d not found in %s", id, repo.FullName())
@@ -79,9 +88,10 @@ func fetchPR(ctx context.Context, client *api.Client, repo cmdutil.Repo, id int)
 func findPRForBranch(ctx context.Context, client *api.Client, repo cmdutil.Repo, branch string) (*bitbucket.PullRequest, error) {
 	var found []bitbucket.PullRequest
 	opts := api.ListOptions{
-		Limit: 1,
-		Query: fmt.Sprintf("source.branch.name=%s", api.BBQLQuote(branch)),
-		Extra: map[string][]string{"state": {"OPEN"}},
+		Limit:  1,
+		Query:  fmt.Sprintf("source.branch.name=%s", api.BBQLQuote(branch)),
+		Extra:  map[string][]string{"state": {"OPEN"}},
+		Fields: "values." + strings.ReplaceAll(prCoreFields, ",", ",values.") + ",next",
 	}
 	err := api.Paginate(ctx, client, prPath(repo, 0, ""), opts, func(p bitbucket.PullRequest) error {
 		found = append(found, p)
@@ -97,8 +107,17 @@ func findPRForBranch(ctx context.Context, client *api.Client, repo cmdutil.Repo,
 }
 
 // resolvePR resolves a PR from a selector: a number, a branch name, a PR URL,
-// or "" for the current branch.
+// or "" for the current branch. Only the core fields are fetched.
 func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, error) {
+	return resolvePRFields(ctx, f, client, repo, selector, prCoreFields)
+}
+
+// resolvePRFull resolves a PR with every field (for `pr view`).
+func resolvePRFull(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, error) {
+	return resolvePRFields(ctx, f, client, repo, selector, "")
+}
+
+func resolvePRFields(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector, fields string) (*bitbucket.PullRequest, error) {
 	selector = strings.TrimSpace(selector)
 	if selector == "" {
 		if f.GitClient == nil {
@@ -115,7 +134,7 @@ func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo
 		return findPRForBranch(ctx, client, repo, branch)
 	}
 	if n, err := parsePRNumber(selector); err == nil {
-		return fetchPR(ctx, client, repo, n)
+		return fetchPR(ctx, client, repo, n, fields)
 	}
 	return findPRForBranch(ctx, client, repo, selector)
 }

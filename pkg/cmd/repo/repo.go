@@ -69,8 +69,8 @@ func cloneURLFor(r *bitbucket.Repository, protocol string) (string, error) {
 			return u, nil
 		}
 	}
-	if u, ok := gitctx.NormalizeCloneURL("https://bitbucket.org/"+r.FullName, protocol); ok {
-		return u, nil
+	if parsed, ok := gitctx.ParseFullName(r.FullName); ok {
+		return gitctx.CloneURL(parsed, protocol), nil
 	}
 	return "", fmt.Errorf("repository %q has no usable clone URL", r.FullName)
 }

@@ -109,7 +109,7 @@ func NewCmdView(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			if web {
-				return cmdutil.OpenBrowser(f, "https://bitbucket.org/"+ws+"/")
+				return cmdutil.OpenBrowser(f, gitctx.WorkspaceWebURL(ws))
 			}
 			client, err := f.APIClient()
 			if err != nil {

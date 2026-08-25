@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/gitctx"
 )
 
 // CreateOptions for `pr create`.
@@ -115,14 +115,7 @@ func runCreate(ctx context.Context, f *cmdutil.Factory, opts *CreateOptions) err
 	}
 
 	if opts.Web {
-		u := fmt.Sprintf("https://bitbucket.org/%s/pull-requests/new?source=%s", repo.FullName(), url.QueryEscape(head))
-		if opts.Base != "" {
-			u += "&dest=" + url.QueryEscape(opts.Base)
-		}
-		if opts.Title != "" {
-			u += "&title=" + url.QueryEscape(opts.Title)
-		}
-		return cmdutil.OpenBrowser(f, u)
+		return cmdutil.OpenBrowser(f, gitctx.NewPullRequestWebURL(repo.Workspace, repo.Slug, head, opts.Base, opts.Title))
 	}
 
 	client, err := f.APIClient()
