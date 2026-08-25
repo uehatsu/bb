@@ -108,6 +108,23 @@ func statusColor(cs *iostreams.ColorScheme, p *bitbucket.Pipeline) func(string) 
 
 func isDone(p *bitbucket.Pipeline) bool { return p.State.Name == "COMPLETED" }
 
+// targetLabel describes what a pipeline ran against: the ref name, or a
+// placeholder for commit / pull-request targets that carry no ref.
+func targetLabel(t *bitbucket.PipelineTarget) string {
+	if t.RefName != "" {
+		return t.RefName
+	}
+	switch t.Type {
+	case "pipeline_commit_target":
+		return "(commit)"
+	case "pipeline_pullrequest_target":
+		return "(pull request)"
+	case "":
+		return ""
+	}
+	return "(" + strings.TrimSuffix(strings.TrimPrefix(t.Type, "pipeline_"), "_target") + ")"
+}
+
 // pipelineURL prefers the server-provided html link and falls back to the
 // canonical results page.
 func pipelineURL(repo cmdutil.Repo, p *bitbucket.Pipeline) string {
@@ -120,7 +137,7 @@ func pipelineURL(repo cmdutil.Repo, p *bitbucket.Pipeline) string {
 func printPipelineRow(tp *output.TablePrinter, cs *iostreams.ColorScheme, p *bitbucket.Pipeline, now time.Time) {
 	tp.AddField(fmt.Sprintf("#%d", p.BuildNumber), cs.Bold)
 	tp.AddField(statusText(p), statusColor(cs, p))
-	tp.AddField(p.Target.RefName, cs.Cyan)
+	tp.AddField(targetLabel(&p.Target), cs.Cyan)
 	commit := ""
 	if p.Target.Commit != nil {
 		commit = p.Target.Commit.ShortHash()
@@ -265,7 +282,7 @@ func printPipeline(f *cmdutil.Factory, repo cmdutil.Repo, p *bitbucket.Pipeline,
 	ios := f.IOStreams
 	cs := ios.ColorScheme()
 	fmt.Fprintf(ios.Out, "%s %s\n", cs.Bold(fmt.Sprintf("Pipeline #%d", p.BuildNumber)), statusColor(cs, p)(statusText(p)))
-	fmt.Fprintf(ios.Out, "%s %s", cs.Gray("Target:"), p.Target.RefName)
+	fmt.Fprintf(ios.Out, "%s %s", cs.Gray("Target:"), targetLabel(&p.Target))
 	if p.Target.Commit != nil {
 		fmt.Fprintf(ios.Out, " (%s)", p.Target.Commit.ShortHash())
 	}

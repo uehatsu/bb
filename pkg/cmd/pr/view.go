@@ -91,8 +91,17 @@ func printPR(f *cmdutil.Factory, pr *bitbucket.PullRequest, comments []bitbucket
 		return
 	}
 	fmt.Fprintf(out, "%s %s\n", cs.Bold(pr.Title), cs.Gray(fmt.Sprintf("%s#%d", repoName(pr), pr.ID)))
-	fmt.Fprintf(out, "%s • %s wants to merge %s into %s\n",
-		stateColor(cs, pr)(prStateLabel(pr)), pr.Author.Name(), cs.Cyan(pr.Source.Branch.Name), cs.Cyan(pr.Destination.Branch.Name))
+	verb := "wants to merge"
+	switch pr.State {
+	case "MERGED":
+		verb = "merged"
+	case "DECLINED":
+		verb = "declined merging"
+	case "SUPERSEDED":
+		verb = "superseded merging"
+	}
+	fmt.Fprintf(out, "%s • %s %s %s into %s\n",
+		stateColor(cs, pr)(prStateLabel(pr)), pr.Author.Name(), verb, cs.Cyan(pr.Source.Branch.Name), cs.Cyan(pr.Destination.Branch.Name))
 	var meta []string
 	if pr.CommentCount > 0 {
 		meta = append(meta, fmt.Sprintf("%d comments", pr.CommentCount))

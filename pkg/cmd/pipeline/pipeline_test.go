@@ -167,3 +167,22 @@ func TestWatchExitStatusFlag(t *testing.T) {
 		t.Errorf("--exit-status=false should succeed: %v", err)
 	}
 }
+
+func TestTargetLabel(t *testing.T) {
+	cases := map[string]string{
+		`{"ref_name":"main","type":"pipeline_ref_target"}`: "main",
+		`{"type":"pipeline_commit_target"}`:                "(commit)",
+		`{"type":"pipeline_pullrequest_target"}`:           "(pull request)",
+		`{"type":"pipeline_tag_target"}`:                   "(tag)",
+		`{}`:                                               "",
+	}
+	for in, want := range cases {
+		var tg bitbucketTarget
+		if err := jsonUnmarshal(in, &tg); err != nil {
+			t.Fatal(err)
+		}
+		if got := targetLabel(&tg); got != want {
+			t.Errorf("%s: got %q want %q", in, got, want)
+		}
+	}
+}
