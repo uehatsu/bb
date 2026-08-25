@@ -180,6 +180,19 @@ Bitbucket リモート）のリポジトリを対象にします。`-R WORKSPACE
 - OAuth ログインには自前の OAuth consumer が必要です（Bitbucket は Device Flow と
   公開クライアント / PKCE に非対応）。設定不要で使えるのは API トークンです。
 
+## Claude Code スキル
+
+`skills/bitbucket/SKILL.md` は [Claude Code](https://claude.com/claude-code) に
+`bb` の安全な使い方（JSON 出力、非対話フラグ、破壊的操作前の確認、Bitbucket 固有の注意）
+を教えるスキルです。一度インストールすると、どのプロジェクトからでも `/bitbucket` で
+呼び出せます。
+
+```sh
+make install-skill        # ~/.claude/skills/bitbucket/SKILL.md にコピー
+```
+
+プロジェクト限定にしたい場合は、そのプロジェクトの `.claude/skills/bitbucket/` にコピーしてください。
+
 ## 開発
 
 ```sh
