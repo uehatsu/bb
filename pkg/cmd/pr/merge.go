@@ -121,7 +121,7 @@ func runMerge(f *cmdutil.Factory, opts *MergeOptions) error {
 		if ios.CanPrompt() && !opts.Yes {
 			choice, err := f.Prompter.Select("What merge strategy would you like to use?", []string{"merge_commit", "squash", "fast_forward", "squash_fast_forward", "rebase_fast_forward", "rebase_merge"})
 			if err != nil {
-				return cmdutil.CancelError
+				return cmdutil.ErrCancel
 			}
 			strategy = choice
 		}
@@ -129,7 +129,7 @@ func runMerge(f *cmdutil.Factory, opts *MergeOptions) error {
 	if ios.CanPrompt() && !opts.Yes {
 		ok, err := f.Prompter.Confirm(fmt.Sprintf("Merge pull request #%d (%s) into %s using %s?", pr.ID, pr.Title, pr.Destination.Branch.Name, strategy), true)
 		if err != nil || !ok {
-			return cmdutil.CancelError
+			return cmdutil.ErrCancel
 		}
 	}
 

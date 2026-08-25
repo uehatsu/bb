@@ -80,8 +80,8 @@ func TestRunAndWatch(t *testing.T) {
 	cmd := NewCmdRun(h.Factory)
 	cmd.SetArgs([]string{"--branch", "main", "--custom", "deploy", "--var", "ENV=prod", "--watch", "--"})
 	err := cmd.Execute()
-	if !errors.Is(err, cmdutil.SilentError) {
-		t.Fatalf("expected SilentError for failed pipeline, got %v", err)
+	if !errors.Is(err, cmdutil.ErrSilent) {
+		t.Fatalf("expected ErrSilent for failed pipeline, got %v", err)
 	}
 	for _, want := range []string{`"ref_type":"branch"`, `"ref_name":"main"`, `"type":"pipeline_ref_target"`, `"selector":{"pattern":"deploy","type":"custom"}`, `"variables":[{"key":"ENV","value":"prod"}]`} {
 		if !strings.Contains(body, want) {

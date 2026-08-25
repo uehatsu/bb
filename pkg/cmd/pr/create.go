@@ -162,14 +162,14 @@ func runCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 		}
 		fmt.Fprintf(ios.ErrOut, "\nCreating pull request for %s into %s in %s\n\n", cs.Cyan(head), cs.Cyan(base), repo.FullName())
 		if title, err = f.Prompter.Input("Title", ""); err != nil {
-			return cmdutil.CancelError
+			return cmdutil.ErrCancel
 		}
 		if strings.TrimSpace(title) == "" {
 			return errors.New("title must not be empty")
 		}
 		if body == "" {
 			if body, err = f.Prompter.Editor("Body", ""); err != nil {
-				return cmdutil.CancelError
+				return cmdutil.ErrCancel
 			}
 		}
 	}

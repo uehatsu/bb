@@ -104,8 +104,8 @@ func TestAPIErrorOutput(t *testing.T) {
 	cmd := NewCmdAPI(f)
 	cmd.SetArgs([]string{"/nope", "-i"})
 	err := cmd.Execute()
-	if err != cmdutil.SilentError {
-		t.Fatalf("expected SilentError, got %v", err)
+	if err != cmdutil.ErrSilent {
+		t.Fatalf("expected ErrSilent, got %v", err)
 	}
 	if !strings.Contains(out.String(), "404") || !strings.Contains(out.String(), "Not found") || !strings.Contains(errOut.String(), "HTTP 404") {
 		t.Errorf("out=%q err=%q", out.String(), errOut.String())

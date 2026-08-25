@@ -276,8 +276,8 @@ func TestDiffAndChecks(t *testing.T) {
 	h.Out.Reset()
 	c := NewCmdChecks(h.Factory)
 	c.SetArgs([]string{"42"})
-	if err := c.Execute(); !errors.Is(err, cmdutil.PendingError) {
-		t.Errorf("expected PendingError, got %v", err)
+	if err := c.Execute(); !errors.Is(err, cmdutil.ErrPending) {
+		t.Errorf("expected ErrPending, got %v", err)
 	}
 	if !strings.Contains(h.Out.String(), "SUCCESSFUL\tPipeline") || !strings.Contains(h.Out.String(), "INPROGRESS\tlint") {
 		t.Errorf("checks: %q", h.Out.String())
@@ -286,8 +286,8 @@ func TestDiffAndChecks(t *testing.T) {
 	h.JSON("GET", "/repositories/acme/widgets/pullrequests/43/statuses", 200, `{"values":[{"key":"build","state":"FAILED"}]}`)
 	c = NewCmdChecks(h.Factory)
 	c.SetArgs([]string{"43"})
-	if err := c.Execute(); !errors.Is(err, cmdutil.SilentError) {
-		t.Errorf("expected SilentError for failed checks, got %v", err)
+	if err := c.Execute(); !errors.Is(err, cmdutil.ErrSilent) {
+		t.Errorf("expected ErrSilent for failed checks, got %v", err)
 	}
 }
 

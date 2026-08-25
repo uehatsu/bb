@@ -522,7 +522,7 @@ func watchPipeline(ctx context.Context, f *cmdutil.Factory, client *api.Client, 
 		return nil
 	default:
 		fmt.Fprintf(ios.ErrOut, "%s Pipeline #%d finished with %s\n", cs.FailureIcon(), last.BuildNumber, result)
-		return cmdutil.SilentError
+		return cmdutil.ErrSilent
 	}
 }
 

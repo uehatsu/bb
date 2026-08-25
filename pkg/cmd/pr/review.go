@@ -111,7 +111,7 @@ func NewCmdComment(f *cmdutil.Factory) *cobra.Command {
 				}
 				v, err := f.Prompter.Editor("Comment", "")
 				if err != nil {
-					return cmdutil.CancelError
+					return cmdutil.ErrCancel
 				}
 				body = v
 			}

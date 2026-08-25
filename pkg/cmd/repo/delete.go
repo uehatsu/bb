@@ -36,7 +36,7 @@ needs the delete:repository:bitbucket scope.`,
 				}
 				typed, err := f.Prompter.Input(fmt.Sprintf("Type %s to confirm deletion", repo.FullName()), "")
 				if err != nil {
-					return cmdutil.CancelError
+					return cmdutil.ErrCancel
 				}
 				if typed != repo.FullName() {
 					return fmt.Errorf("confirmation did not match %q; aborting", repo.FullName())

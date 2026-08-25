@@ -172,7 +172,7 @@ func NewCmdDelete(f *cmdutil.Factory) *cobra.Command {
 			if !yes && f.IOStreams.CanPrompt() {
 				ok, err := f.Prompter.Confirm(fmt.Sprintf("Delete branch %s in %s?", args[0], repo.FullName()), false)
 				if err != nil || !ok {
-					return cmdutil.CancelError
+					return cmdutil.ErrCancel
 				}
 			}
 			client, err := f.APIClient()

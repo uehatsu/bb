@@ -109,13 +109,13 @@ func runLogin(ctx context.Context, f *cmdutil.Factory, opts *LoginOptions) error
 		if cred.Method == config.AuthAPIToken && cred.Email == "" {
 			cred.Email, err = f.Prompter.Input("Atlassian account email", "you@example.com")
 			if err != nil {
-				return cmdutil.CancelError
+				return cmdutil.ErrCancel
 			}
 			cred.Email = strings.TrimSpace(cred.Email)
 		}
 		cred.Token, err = f.Prompter.Password("Paste your API token")
 		if err != nil {
-			return cmdutil.CancelError
+			return cmdutil.ErrCancel
 		}
 		cred.Token = strings.TrimSpace(cred.Token)
 		if opts.ExpiresIn == "" {

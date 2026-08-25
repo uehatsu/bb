@@ -27,14 +27,14 @@ func run() int {
 		return cmdutil.ExitOK
 	}
 
-	if errors.Is(err, cmdutil.SilentError) {
+	if errors.Is(err, cmdutil.ErrSilent) {
 		return cmdutil.ExitError
 	}
 	if cmdutil.IsUserCancellation(err) {
 		fmt.Fprintln(f.IOStreams.ErrOut)
 		return cmdutil.ExitCancel
 	}
-	if errors.Is(err, cmdutil.PendingError) {
+	if errors.Is(err, cmdutil.ErrPending) {
 		return cmdutil.ExitPending
 	}
 	var authErr *cmdutil.AuthError

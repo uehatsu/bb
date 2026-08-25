@@ -43,7 +43,7 @@ func runStatus(f *cmdutil.Factory, showToken bool) error {
 	cred, err := config.ResolveCredential(cfg.Credentials(), config.DefaultHost, os.Getenv)
 	if errors.Is(err, config.ErrNotFound) {
 		fmt.Fprintf(io.Out, "bitbucket.org\n  %s Not logged in. Run `bb auth login`.\n", cs.FailureIcon())
-		return cmdutil.SilentError
+		return cmdutil.ErrSilent
 	}
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func runStatus(f *cmdutil.Factory, showToken bool) error {
 		if cred.IsExpired(time.Now()) {
 			fmt.Fprintf(io.Out, "  %s The recorded expiry (%s) has passed. Create a new token and run `bb auth login`.\n", cs.WarningIcon(), cred.ExpiresAt.Format("2006-01-02"))
 		}
-		return cmdutil.SilentError
+		return cmdutil.ErrSilent
 	}
 	fmt.Fprintf(io.Out, "  %s Logged in as %s", cs.SuccessIcon(), cs.Bold(user.Name()))
 	if user.Email != "" {

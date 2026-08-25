@@ -16,14 +16,14 @@ const (
 	ExitPending = 8
 )
 
-// SilentError indicates the error has already been reported to the user.
-var SilentError = errors.New("SilentError")
+// ErrSilent indicates the error has already been reported to the user.
+var ErrSilent = errors.New("silent error")
 
-// CancelError is returned when the user aborts an interactive prompt.
-var CancelError = errors.New("CancelError")
+// ErrCancel is returned when the user aborts an interactive prompt.
+var ErrCancel = errors.New("cancelled")
 
-// PendingError is used by watch-style commands whose target is still running.
-var PendingError = errors.New("PendingError")
+// ErrPending is used by watch-style commands whose target is still running.
+var ErrPending = errors.New("pending")
 
 // AuthError signals that the user must authenticate first.
 type AuthError struct{ Msg string }
@@ -54,5 +54,5 @@ func FlagErrorWrap(err error) error { return &FlagError{err: err} }
 
 // IsUserCancellation reports whether err represents a user cancel (Ctrl-C / prompt abort).
 func IsUserCancellation(err error) bool {
-	return errors.Is(err, CancelError)
+	return errors.Is(err, ErrCancel)
 }

@@ -161,7 +161,7 @@ func TestStatusAndLogout(t *testing.T) {
 		t.Error("logout should delete credential")
 	}
 	out.Reset()
-	if err := runStatus(f, false); err != cmdutil.SilentError || !strings.Contains(out.String(), "Not logged in") {
+	if err := runStatus(f, false); err != cmdutil.ErrSilent || !strings.Contains(out.String(), "Not logged in") {
 		t.Errorf("status after logout: %v %s", err, out.String())
 	}
 }

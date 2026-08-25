@@ -38,10 +38,10 @@ failed.`,
 					pending, failed := printChecks(f, statuses)
 					if !watch || pending == 0 {
 						if failed > 0 {
-							return cmdutil.SilentError
+							return cmdutil.ErrSilent
 						}
 						if pending > 0 {
-							return cmdutil.PendingError
+							return cmdutil.ErrPending
 						}
 						return nil
 					}

@@ -170,7 +170,7 @@ func run(f *cmdutil.Factory, opts *Options) error {
 				printRaw(ios.Out, []byte(herr.Body), ios.IsStdoutTTY())
 			}
 			fmt.Fprintf(ios.ErrOut, "bb: %s\n", herr.Error())
-			return cmdutil.SilentError
+			return cmdutil.ErrSilent
 		}
 		return err
 	}

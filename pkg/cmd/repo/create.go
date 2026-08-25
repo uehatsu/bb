@@ -65,7 +65,7 @@ workspace's oldest project.`,
 				if f.IOStreams.CanPrompt() {
 					v, err := f.Prompter.Select("Visibility", []string{"private", "public"})
 					if err != nil {
-						return cmdutil.CancelError
+						return cmdutil.ErrCancel
 					}
 					opts.Private = v == "private"
 				} else {
@@ -89,14 +89,14 @@ workspace's oldest project.`,
 func promptCreate(f *cmdutil.Factory, opts *CreateOptions) error {
 	var err error
 	if opts.Name, err = f.Prompter.Input("Repository name", "my-repo"); err != nil {
-		return cmdutil.CancelError
+		return cmdutil.ErrCancel
 	}
 	if opts.Description, err = f.Prompter.Input("Description", ""); err != nil {
-		return cmdutil.CancelError
+		return cmdutil.ErrCancel
 	}
 	v, err := f.Prompter.Select("Visibility", []string{"private", "public"})
 	if err != nil {
-		return cmdutil.CancelError
+		return cmdutil.ErrCancel
 	}
 	opts.Private = v == "private"
 	return nil
