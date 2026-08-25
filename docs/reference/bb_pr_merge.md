@@ -22,15 +22,15 @@ bb pr merge [<number> | <branch> | <url>] [flags]
 
 ```
   $ bb pr merge 42 --squash --delete-branch
-  $ bb pr merge --strategy rebase_fast_forward -m "Rebase and merge"
+  $ bb pr merge --strategy rebase_fast_forward --body "Rebase and merge"
 ```
 
 ### Options
 
 ```
+  -b, --body string        Commit message for the merge commit
   -d, --delete-branch      Delete the source branch after merge
   -m, --merge              Merge with a merge commit
-      --message string     Commit message for the merge commit
   -r, --rebase             Rebase the commits onto the base branch and merge (rebase_merge)
   -s, --squash             Squash the commits into one commit and merge
       --strategy string    Bitbucket merge strategy (see help)

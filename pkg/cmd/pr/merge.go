@@ -49,7 +49,7 @@ fast_forward, squash_fast_forward, rebase_fast_forward, rebase_merge.
 Bitbucket may perform the merge asynchronously; in that case bb polls the
 merge task until it completes (see --timeout).`,
 		Example: `  $ bb pr merge 42 --squash --delete-branch
-  $ bb pr merge --strategy rebase_fast_forward -m "Rebase and merge"`,
+  $ bb pr merge --strategy rebase_fast_forward --body "Rebase and merge"`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
@@ -75,7 +75,9 @@ merge task until it completes (see --timeout).`,
 	cmd.Flags().BoolVarP(&opts.Rebase, "rebase", "r", false, "Rebase the commits onto the base branch and merge (rebase_merge)")
 	cmd.Flags().StringVar(&opts.Strategy, "strategy", "", "Bitbucket merge strategy (see help)")
 	cmd.Flags().BoolVarP(&opts.DeleteBranch, "delete-branch", "d", false, "Delete the source branch after merge")
-	cmd.Flags().StringVar(&opts.Message, "message", "", "Commit message for the merge commit")
+	cmd.Flags().StringVarP(&opts.Message, "body", "b", "", "Commit message for the merge commit")
+	cmd.Flags().StringVar(&opts.Message, "message", "", "Alias of --body")
+	_ = cmd.Flags().MarkHidden("message")
 	cmd.Flags().DurationVar(&opts.Timeout, "timeout", 5*time.Minute, "How long to wait for an asynchronous merge")
 	cmd.Flags().BoolVarP(&opts.Yes, "yes", "y", false, "Skip the confirmation prompt")
 	return cmd
@@ -117,7 +119,14 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 			strategy = "merge_commit"
 		}
 		if ios.CanPrompt() && !opts.Yes {
-			choice, err := f.Prompter.Select("What merge strategy would you like to use?", []string{"merge_commit", "squash", "fast_forward", "squash_fast_forward", "rebase_fast_forward", "rebase_merge"})
+			// Offer the configured default first so Enter keeps it.
+			options := []string{strategy}
+			for _, s := range []string{"merge_commit", "squash", "fast_forward", "squash_fast_forward", "rebase_fast_forward", "rebase_merge"} {
+				if s != strategy {
+					options = append(options, s)
+				}
+			}
+			choice, err := f.Prompter.Select("What merge strategy would you like to use?", options)
 			if err != nil {
 				return cmdutil.PromptError(err)
 			}

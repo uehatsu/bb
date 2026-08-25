@@ -47,6 +47,11 @@ func ResolveFreshCredential(ctx context.Context, store CredentialStore, host str
 	}
 	fresh, err := RefreshOAuth(ctx, cred)
 	if err != nil {
+		// Another bb process (e.g. parallel git credential helpers) may have
+		// refreshed and rotated the token meanwhile; use its result if so.
+		if again, gerr := store.Get(host); gerr == nil && again.Token != cred.Token && !again.NeedsRefresh(now) {
+			return again, nil
+		}
 		return cred, &ErrRefreshFailed{Err: err}
 	}
 	if serr := store.Set(host, fresh); serr != nil {

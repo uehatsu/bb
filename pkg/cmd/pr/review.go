@@ -52,21 +52,27 @@ in addition to the review action.`,
 			return withPR(cmd.Context(), f, sel, func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitbucket.PullRequest) error {
 				cs := f.IOStreams.ColorScheme()
 				prID := pr.ID
-				if strings.TrimSpace(body) != "" {
-					if _, err := postComment(ctx, c, repo, prID, body); err != nil {
-						return err
-					}
-				}
+				// Record the review action first so a failed action never leaves
+				// an orphan comment behind.
 				switch {
 				case approve:
 					if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, prID, "approve")}, nil); err != nil {
 						return err
 					}
-					fmt.Fprintf(f.IOStreams.ErrOut, "%s Approved pull request #%d\n", cs.SuccessIcon(), prID)
 				case requestChanges:
 					if _, err := c.Do(ctx, api.Request{Method: "POST", Path: prPath(repo, prID, "request-changes")}, nil); err != nil {
 						return err
 					}
+				}
+				if strings.TrimSpace(body) != "" {
+					if _, err := postComment(ctx, c, repo, prID, body); err != nil {
+						return fmt.Errorf("review recorded, but posting the comment failed: %w", err)
+					}
+				}
+				switch {
+				case approve:
+					fmt.Fprintf(f.IOStreams.ErrOut, "%s Approved pull request #%d\n", cs.SuccessIcon(), prID)
+				case requestChanges:
 					fmt.Fprintf(f.IOStreams.ErrOut, "%s Requested changes on pull request #%d\n", cs.Yellow("✓"), prID)
 				default:
 					fmt.Fprintf(f.IOStreams.ErrOut, "%s Commented on pull request #%d\n", cs.SuccessIcon(), prID)

@@ -264,3 +264,16 @@ func TestResolvePreservesEscapes(t *testing.T) {
 		t.Errorf("uuid braces: %s", u.String())
 	}
 }
+
+func TestMaskSecrets(t *testing.T) {
+	in := `{"access_token":"abc","refresh_token":"def","scopes":"x","user":{"password":"p"},"n":1}`
+	got := MaskSecrets(in)
+	for _, bad := range []string{`"abc"`, `"def"`, `"p"`} {
+		if strings.Contains(got, bad) {
+			t.Errorf("leaked %s in %s", bad, got)
+		}
+	}
+	if !strings.Contains(got, `"scopes":"x"`) {
+		t.Errorf("non-secret altered: %s", got)
+	}
+}

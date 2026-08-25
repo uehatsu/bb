@@ -16,6 +16,7 @@ bb pr checks [<number> | <branch> | <url>] [flags]
 
 ```
   -i, --interval duration   Refresh interval when watching (default 10s)
+      --timeout duration    Give up watching after this duration (0 = no limit)
       --watch               Watch checks until they finish
 ```
 

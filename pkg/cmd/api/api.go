@@ -70,6 +70,9 @@ With --paginate, all pages are fetched by following "next" links and the
 			if opts.Paginate && opts.Method != "" && !strings.EqualFold(opts.Method, "GET") {
 				return cmdutil.FlagErrorf("--paginate only works with GET requests")
 			}
+			if opts.Paginate && opts.Include {
+				return cmdutil.FlagErrorf("--include cannot be combined with --paginate")
+			}
 			if opts.InputFile != "" && (len(opts.Fields) > 0 || len(opts.RawFields) > 0) {
 				return cmdutil.FlagErrorf("--input cannot be combined with --field/--raw-field")
 			}
@@ -180,7 +183,7 @@ func run(ctx context.Context, f *cmdutil.Factory, opts *Options) error {
 		fmt.Fprintf(ios.Out, "%s %s\n", resp.Proto, resp.Status)
 		for k, vs := range resp.Header {
 			for _, v := range vs {
-				fmt.Fprintf(ios.Out, "%s: %s\n", k, v)
+				fmt.Fprintf(ios.Out, "%s: %s\n", k, bbapi.MaskHeader(k, v))
 			}
 		}
 		fmt.Fprintln(ios.Out)

@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -76,7 +78,7 @@ func apiClientFunc(f *cmdutil.Factory) func() (*api.Client, error) {
 			case "2":
 				opts = append(opts, api.WithLogger(f.IOStreams.ErrOut, true))
 			}
-			client = api.NewClient(api.NewAuthenticator(cred), opts...)
+			client = api.NewClient(&refreshingAuth{cfg: cfg, cred: cred, errOut: f.IOStreams.ErrOut}, opts...)
 		})
 		return client, err
 	}
@@ -96,4 +98,28 @@ func applyPager(f *cmdutil.Factory, io *iostreams.IOStreams) {
 	if p := os.Getenv("PAGER"); p != "" {
 		io.SetPager(p)
 	}
+}
+
+// refreshingAuth re-resolves the credential before each request when an
+// OAuth access token is about to expire, so long-running commands
+// (pipeline watch, pr checks --watch) survive the 2 hour token lifetime.
+type refreshingAuth struct {
+	mu     sync.Mutex
+	cfg    *config.Config
+	cred   config.Credential
+	errOut io.Writer
+}
+
+func (a *refreshingAuth) Apply(r *http.Request) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.cred.NeedsRefresh(time.Now()) {
+		fresh, err := config.ResolveFreshCredential(r.Context(), a.cfg.Credentials(), config.DefaultHost, os.Getenv, time.Now())
+		if err == nil {
+			a.cred = fresh
+		} else {
+			fmt.Fprintf(a.errOut, "warning: %v\n", err)
+		}
+	}
+	api.NewAuthenticator(a.cred).Apply(r)
 }

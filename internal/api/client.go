@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -279,7 +280,7 @@ func (c *Client) logResponse(r *http.Response, d time.Duration) {
 		b, _ := io.ReadAll(r.Body)
 		r.Body.Close()
 		r.Body = io.NopCloser(bytes.NewReader(b))
-		fmt.Fprintf(c.Logger, "< body: %s\n", string(b))
+		fmt.Fprintf(c.Logger, "< body: %s\n", MaskSecrets(string(b)))
 	}
 }
 
@@ -297,6 +298,17 @@ func maskHeader(k, v string) string {
 	}
 	return v
 }
+
+var secretJSONKey = regexp.MustCompile(`(?i)("(?:[a-z_]*token|password|secret|client_secret)"\s*:\s*")[^"]*(")`)
+
+// MaskSecrets blanks the values of JSON keys that look like credentials
+// (access_token, refresh_token, password, secret, ...).
+func MaskSecrets(s string) string {
+	return secretJSONKey.ReplaceAllString(s, "${1}********${2}")
+}
+
+// MaskHeader hides the value of sensitive headers.
+func MaskHeader(k, v string) string { return maskHeader(k, v) }
 
 // maskURL hides credentials embedded in the URL and any access_token query.
 func maskURL(u *url.URL) string {

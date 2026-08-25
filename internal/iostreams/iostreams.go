@@ -105,7 +105,13 @@ func (s *IOStreams) StartPager() error {
 		return nil
 	}
 	cmd := exec.Command(parts[0], parts[1:]...)
-	cmd.Env = append(os.Environ(), "LESS=FRX", "LV=-c")
+	cmd.Env = os.Environ()
+	if os.Getenv("LESS") == "" {
+		cmd.Env = append(cmd.Env, "LESS=FRX")
+	}
+	if os.Getenv("LV") == "" {
+		cmd.Env = append(cmd.Env, "LV=-c")
+	}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	w, err := cmd.StdinPipe()

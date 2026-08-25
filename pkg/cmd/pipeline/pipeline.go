@@ -638,6 +638,16 @@ func streamStepLog(ctx context.Context, client *api.Client, repo cmdutil.Repo, p
 		if _, err := client.Do(ctx, api.Request{Path: fmt.Sprintf("%s/%s/steps/%s", basePath(repo), pipelineUUID, stepUUID)}, &s); err != nil {
 			return false, err
 		}
-		return s.State.Name == "COMPLETED", nil
+		if s.State.Name != "COMPLETED" {
+			return false, nil
+		}
+		// One last fetch so output written between the previous fetch and
+		// completion is not lost.
+		if n, _, err := fetch(); err != nil {
+			return false, err
+		} else {
+			offset += n
+		}
+		return true, nil
 	})
 }

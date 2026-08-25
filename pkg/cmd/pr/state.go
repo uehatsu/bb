@@ -33,6 +33,12 @@ func NewCmdDecline(f *cmdutil.Factory) *cobra.Command {
 				fmt.Fprintf(f.IOStreams.ErrOut, "%s Declined pull request #%d (%s)\n", f.IOStreams.ColorScheme().Red("✓"), pr.ID, pr.Title)
 				if deleteBranch {
 					branch := pr.Source.Branch.Name
+					// The source branch lives in the source repository, which for
+					// fork PRs is not the base repository; never delete a same-named
+					// branch in the base repo by mistake.
+					if pr.Source.Repository != nil && pr.Source.Repository.FullName != "" && pr.Source.Repository.FullName != repo.FullName() {
+						return fmt.Errorf("declined, but not deleting branch %s: it belongs to fork %s (delete it there with `bb branch delete %s -R %s`)", branch, pr.Source.Repository.FullName, branch, pr.Source.Repository.FullName)
+					}
 					if _, err := c.Do(ctx, api.Request{Method: "DELETE", Path: fmt.Sprintf("/repositories/%s/%s/refs/branches/%s", repo.Workspace, repo.Slug, url.PathEscape(branch))}, nil); err != nil {
 						return fmt.Errorf("declined, but could not delete branch %s: %w", branch, err)
 					}

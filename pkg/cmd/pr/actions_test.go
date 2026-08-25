@@ -33,7 +33,7 @@ func TestMergeSync(t *testing.T) {
 	})
 	_ = h.Config.Set("merge_strategy", "squash")
 	cmd := NewCmdMerge(h.Factory)
-	cmd.SetArgs([]string{"42", "--delete-branch", "--message", "Squashed"})
+	cmd.SetArgs([]string{"42", "--delete-branch", "-b", "Squashed"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -360,5 +360,33 @@ func TestDiffColorFlag(t *testing.T) {
 	d.SetArgs([]string{"42", "--color", "sometimes"})
 	if err := d.Execute(); err == nil {
 		t.Error("expected invalid --color error")
+	}
+}
+
+func TestDeclineDeleteBranchRefusesFork(t *testing.T) {
+	h := testutil.NewHarness(t)
+	fork := strings.Replace(prJSON, `"repository":{"full_name":"acme/widgets","workspace":{"slug":"acme"}}`, `"repository":{"full_name":"alice/widgets-fork"}`, 1)
+	h.JSON("GET", "/repositories/acme/widgets/pullrequests/42", 200, fork)
+	h.JSON("POST", "/repositories/acme/widgets/pullrequests/42/decline", 200, `{}`)
+	deleted := false
+	h.Handle("/repositories/acme/widgets/refs/branches/feat%2Flogin", func(w http.ResponseWriter, r *http.Request) { deleted = true })
+	d := NewCmdDecline(h.Factory)
+	d.SetArgs([]string{"42", "--delete-branch"})
+	err := d.Execute()
+	if err == nil || !strings.Contains(err.Error(), "alice/widgets-fork") || deleted {
+		t.Errorf("fork branch must not be deleted from base repo: err=%v deleted=%v", err, deleted)
+	}
+}
+
+func TestReviewActionBeforeComment(t *testing.T) {
+	h := testutil.NewHarness(t)
+	h.JSON("GET", "/repositories/acme/widgets/pullrequests/42", 200, prJSON)
+	h.JSON("POST", "/repositories/acme/widgets/pullrequests/42/approve", 403, `{"type":"error","error":{"message":"forbidden"}}`)
+	commented := false
+	h.Handle("/repositories/acme/widgets/pullrequests/42/comments", func(w http.ResponseWriter, r *http.Request) { commented = true; w.Write([]byte(`{}`)) })
+	rv := NewCmdReview(h.Factory)
+	rv.SetArgs([]string{"42", "--approve", "-b", "LGTM"})
+	if err := rv.Execute(); err == nil || commented {
+		t.Errorf("failed approve must not leave a comment: err=%v commented=%v", err, commented)
 	}
 }

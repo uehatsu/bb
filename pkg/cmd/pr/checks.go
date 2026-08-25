@@ -16,7 +16,7 @@ import (
 // NewCmdChecks returns `pr checks`, showing commit statuses (builds).
 func NewCmdChecks(f *cmdutil.Factory) *cobra.Command {
 	var watch bool
-	var interval time.Duration
+	var interval, timeout time.Duration
 	cmd := &cobra.Command{
 		Use:   "checks [<number> | <branch> | <url>]",
 		Short: "Show build statuses for a pull request",
@@ -33,11 +33,14 @@ failed.`,
 					if err != nil {
 						return false, err
 					}
+					if watch && f.IOStreams.IsStdoutTTY() {
+						fmt.Fprint(f.IOStreams.Out, "\x1b[2J\x1b[H") // redraw in place like gh
+					}
 					pending, failed = printChecks(f, statuses)
 					return pending == 0, nil
 				}
 				if watch {
-					if err := api.Poll(ctx, api.PollOptions{Initial: interval, Max: interval, Factor: 1}, report); err != nil {
+					if err := api.Poll(ctx, api.PollOptions{Initial: interval, Max: interval, Factor: 1, Timeout: timeout}, report); err != nil {
 						return err
 					}
 				} else if _, err := report(ctx); err != nil {
@@ -55,6 +58,7 @@ failed.`,
 	}
 	cmd.Flags().BoolVar(&watch, "watch", false, "Watch checks until they finish")
 	cmd.Flags().DurationVarP(&interval, "interval", "i", 10*time.Second, "Refresh interval when watching")
+	cmd.Flags().DurationVar(&timeout, "timeout", 0, "Give up watching after this duration (0 = no limit)")
 	return cmd
 }
 
