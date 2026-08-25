@@ -6,6 +6,7 @@ import (
 
 	"github.com/uehatsu/bb/internal/build"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	authCmd "github.com/uehatsu/bb/pkg/cmd/auth"
 	versionCmd "github.com/uehatsu/bb/pkg/cmd/version"
 )
 
@@ -27,7 +28,10 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 	cmd.PersistentFlags().Bool("help", false, "Show help for command")
 	cmd.Flags().Bool("version", false, "Show bb version")
 
-	cmd.AddCommand(versionCmd.NewCmdVersion(f))
+	cmd.AddCommand(
+		authCmd.NewCmdAuth(f),
+		versionCmd.NewCmdVersion(f),
+	)
 
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	return cmd

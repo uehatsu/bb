@@ -1,9 +1,11 @@
 package cmdutil
 
 import (
-	"net/http"
-
+	"github.com/uehatsu/bb/internal/api"
+	"github.com/uehatsu/bb/internal/config"
+	"github.com/uehatsu/bb/internal/git"
 	"github.com/uehatsu/bb/internal/iostreams"
+	"github.com/uehatsu/bb/internal/prompt"
 )
 
 // Repo identifies a Bitbucket repository by workspace and slug.
@@ -21,19 +23,15 @@ type Factory struct {
 	IOStreams  *iostreams.IOStreams
 	Executable string
 
-	// HTTPClient returns an authenticated http.Client for api.bitbucket.org.
-	HTTPClient func() (*http.Client, error)
+	// Config returns the loaded configuration (cached).
+	Config func() (*config.Config, error)
+	// APIClient returns an authenticated Bitbucket API client. It returns an
+	// *AuthError when no credential is available.
+	APIClient func() (*api.Client, error)
 	// BaseRepo resolves the target repository from -R, BB_REPO, or git remotes.
 	BaseRepo func() (Repo, error)
-	// Config returns the loaded configuration.
-	Config func() (Config, error)
-}
-
-// Config is the minimal configuration surface commands depend on. The
-// concrete implementation lives in internal/config.
-type Config interface {
-	Get(key string) (string, error)
-	Set(key, value string) error
-	Keys() []string
-	Write() error
+	// GitClient runs git commands.
+	GitClient func() (*git.Client, error)
+	// Prompter asks interactive questions.
+	Prompter prompt.Prompter
 }
