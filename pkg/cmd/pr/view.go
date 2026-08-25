@@ -49,7 +49,7 @@ func runView(ctx context.Context, f *cmdutil.Factory, selector string, web, with
 	if err != nil {
 		return err
 	}
-	pr, err := resolvePRFull(ctx, f, client, repo, selector)
+	pr, repo, err := resolvePRFull(ctx, f, client, repo, selector)
 	if err != nil {
 		return err
 	}

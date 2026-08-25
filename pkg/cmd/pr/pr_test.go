@@ -18,10 +18,17 @@ func TestParsePRNumber(t *testing.T) {
 			t.Errorf("%s: %d %v", in, got, err)
 		}
 	}
-	for _, bad := range []string{"feat/x", "0", "-1", ""} {
+	for _, bad := range []string{"feat/x", "0", "-1", "", "https://github.com/a/b/pull/1", "https://bitbucket.org/a/pull-requests/1"} {
 		if _, err := parsePRNumber(bad); err == nil {
 			t.Errorf("%q should fail", bad)
 		}
+	}
+	sel, err := parsePRSelector("https://bitbucket.org/acme/widgets/pull-requests/7/diff")
+	if err != nil || sel.number != 7 || sel.repo == nil || sel.repo.FullName() != "acme/widgets" {
+		t.Errorf("url selector: %+v %v", sel, err)
+	}
+	if sel, err := parsePRSelector("feat/x"); err != nil || sel.number != 0 || sel.repo != nil {
+		t.Errorf("branch selector: %+v %v", sel, err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/zalando/go-keyring"
@@ -89,5 +90,44 @@ func TestCredentialStoreMigration(t *testing.T) {
 	c.SetArgs([]string{"set", "credential_store", "keyring"})
 	if err := c.Execute(); err != nil || contains(h2.ErrOut.String(), "Moved") {
 		t.Errorf("no credential: err=%v stderr=%s", err, h2.ErrOut.String())
+	}
+}
+
+func TestCredentialStoreMigrationRollsBackOnWriteFailure(t *testing.T) {
+	keyring.MockInit()
+	h := testutil.NewHarness(t)
+	cred := bbconfig.Credential{Method: bbconfig.AuthAPIToken, Email: "e", Token: "tok"}
+	_ = h.Config.Credentials().Set(bbconfig.DefaultHost, cred)
+	orig := writeConfig
+	defer func() { writeConfig = orig }()
+	writeConfig = func(*bbconfig.Config) error { return errors.New("disk full") }
+
+	c := NewCmdConfig(h.Factory)
+	c.SetArgs([]string{"set", "credential_store", "keyring"})
+	if err := c.Execute(); err == nil || !contains(err.Error(), "disk full") {
+		t.Fatalf("expected write failure, got %v", err)
+	}
+	// old store still has the credential; config still says file; keyring copy removed
+	if got, err := h.Config.Credentials().Get(bbconfig.DefaultHost); err != nil || got.Token != "tok" {
+		t.Errorf("old store must keep the credential after a failed migration: %+v %v", got, err)
+	}
+	if v, _ := h.Config.Get("credential_store"); v != "file" {
+		t.Errorf("config must be rolled back, got %q", v)
+	}
+	if _, err := bbconfig.NewKeyringCredentialStore().Get(bbconfig.DefaultHost); err != bbconfig.ErrNotFound {
+		t.Errorf("target copy must be rolled back, got %v", err)
+	}
+	// with a working write the migration completes and the config is saved
+	writeConfig = orig
+	c = NewCmdConfig(h.Factory)
+	c.SetArgs([]string{"set", "credential_store", "keyring"})
+	if err := c.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := h.Config.Get("credential_store"); v != "keyring" {
+		t.Errorf("config not updated: %q", v)
+	}
+	if _, err := bbconfig.NewKeyringCredentialStore().Get(bbconfig.DefaultHost); err != nil {
+		t.Errorf("credential must now live in the keyring: %v", err)
 	}
 }

@@ -412,3 +412,45 @@ func TestEditRemoveReviewerWhoLeftWorkspace(t *testing.T) {
 		t.Errorf("put body: %s", putBody)
 	}
 }
+
+func TestPRURLTargetsItsOwnRepository(t *testing.T) {
+	h := testutil.NewHarness(t) // base repo is acme/widgets
+	var hit []string
+	h.Handle("/repositories/other/repo/pullrequests/42", func(w http.ResponseWriter, r *http.Request) {
+		hit = append(hit, r.Method+" other")
+		w.Write([]byte(strings.ReplaceAll(prJSON, `"full_name":"acme/widgets"`, `"full_name":"other/repo"`)))
+	})
+	h.Handle("/repositories/other/repo/pullrequests/42/approve", func(w http.ResponseWriter, r *http.Request) {
+		hit = append(hit, "approve other")
+		w.Write([]byte(`{}`))
+	})
+	h.Handle("/repositories/acme/widgets/pullrequests/42", func(w http.ResponseWriter, r *http.Request) {
+		hit = append(hit, "WRONG REPO")
+		w.Write([]byte(prJSON))
+	})
+	a := NewCmdApprove(h.Factory)
+	a.SetArgs([]string{"https://bitbucket.org/other/repo/pull-requests/42/overview"})
+	if err := a.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(hit, ",")
+	if strings.Contains(joined, "WRONG") || !strings.Contains(joined, "approve other") {
+		t.Errorf("URL must target the repository in the URL: %v", hit)
+	}
+	for _, bad := range []string{
+		"https://github.com/other/repo/pull/42",
+		"http://bitbucket.org/other/repo/pull-requests/42",
+		"https://bitbucket.org/other/pull-requests/42",
+		"https://bitbucket.org/other/repo/commits/42",
+		"https://bitbucket.org/other/repo/pull-requests/abc",
+	} {
+		a = NewCmdApprove(h.Factory)
+		a.SetArgs([]string{bad})
+		if err := a.Execute(); err == nil {
+			t.Errorf("%s must be rejected", bad)
+		}
+	}
+	if strings.Contains(strings.Join(hit, ","), "WRONG") {
+		t.Error("rejected URLs must never fall back to the current repository")
+	}
+}

@@ -44,7 +44,7 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			pr, err := resolvePR(ctx, f, client, repo, sel)
+			pr, repo, err := resolvePR(ctx, f, client, repo, sel)
 			if err != nil {
 				return err
 			}

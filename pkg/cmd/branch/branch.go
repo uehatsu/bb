@@ -163,7 +163,10 @@ func NewCmdDelete(f *cmdutil.Factory) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if !yes && f.IOStreams.CanPrompt() {
+			if !yes {
+				if !f.IOStreams.CanPrompt() {
+					return cmdutil.FlagErrorf("--yes required to delete a branch when not running interactively")
+				}
 				ok, err := f.Prompter.Confirm(fmt.Sprintf("Delete branch %s in %s?", args[0], repo.FullName()), false)
 				if err != nil || !ok {
 					return cmdutil.PromptError(err)

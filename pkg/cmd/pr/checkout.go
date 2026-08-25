@@ -43,7 +43,7 @@ func runCheckout(ctx context.Context, f *cmdutil.Factory, selector, localBranch 
 	if err != nil {
 		return err
 	}
-	pr, err := resolvePR(ctx, f, client, repo, selector)
+	pr, repo, err := resolvePR(ctx, f, client, repo, selector)
 	if err != nil {
 		return err
 	}

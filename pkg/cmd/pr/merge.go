@@ -98,7 +98,7 @@ func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error
 	if err != nil {
 		return err
 	}
-	pr, err := resolvePR(ctx, f, client, repo, opts.Selector)
+	pr, repo, err := resolvePR(ctx, f, client, repo, opts.Selector)
 	if err != nil {
 		return err
 	}

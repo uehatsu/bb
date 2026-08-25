@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	"github.com/uehatsu/bb/internal/gitctx"
 	"github.com/uehatsu/bb/internal/iostreams"
 )
 
@@ -107,52 +109,101 @@ func findPRForBranch(ctx context.Context, client *api.Client, repo cmdutil.Repo,
 }
 
 // resolvePR resolves a PR from a selector: a number, a branch name, a PR URL,
-// or "" for the current branch. Only the core fields are fetched.
-func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, error) {
+// or "" for the current branch. Only the core fields are fetched. The
+// returned repo is the repository the PR belongs to: for URL selectors it is
+// taken from the URL (like gh), otherwise it is the repo passed in.
+func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
 	return resolvePRFields(ctx, f, client, repo, selector, prCoreFields)
 }
 
 // resolvePRFull resolves a PR with every field (for `pr view`).
-func resolvePRFull(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, error) {
+func resolvePRFull(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
 	return resolvePRFields(ctx, f, client, repo, selector, "")
 }
 
-func resolvePRFields(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector, fields string) (*bitbucket.PullRequest, error) {
+func resolvePRFields(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector, fields string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
 	selector = strings.TrimSpace(selector)
 	if selector == "" {
 		if f.GitClient == nil {
-			return nil, errors.New("pull request number or branch required")
+			return nil, repo, errors.New("pull request number or branch required")
 		}
 		g, err := f.GitClient()
 		if err != nil {
-			return nil, errors.New("pull request number or branch required")
+			return nil, repo, errors.New("pull request number or branch required")
 		}
 		branch, err := g.CurrentBranch(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("could not determine current branch: %w", err)
+			return nil, repo, fmt.Errorf("could not determine current branch: %w", err)
 		}
-		return findPRForBranch(ctx, client, repo, branch)
+		pr, err := findPRForBranch(ctx, client, repo, branch)
+		return pr, repo, err
 	}
-	if n, err := parsePRNumber(selector); err == nil {
-		return fetchPR(ctx, client, repo, n, fields)
+	sel, err := parsePRSelector(selector)
+	if err != nil {
+		return nil, repo, err
 	}
-	return findPRForBranch(ctx, client, repo, selector)
+	if sel.repo != nil {
+		// A URL identifies the resource fully; never alias it onto the
+		// current repository (that would target the wrong PR).
+		repo = *sel.repo
+	}
+	if sel.number > 0 {
+		pr, err := fetchPR(ctx, client, repo, sel.number, fields)
+		return pr, repo, err
+	}
+	pr, err := findPRForBranch(ctx, client, repo, selector)
+	return pr, repo, err
 }
 
-// parsePRNumber accepts "42", "#42", or a bitbucket.org pull request URL.
-func parsePRNumber(s string) (int, error) {
-	s = strings.TrimPrefix(s, "#")
-	if i := strings.Index(s, "/pull-requests/"); i >= 0 {
-		s = s[i+len("/pull-requests/"):]
-		if j := strings.IndexAny(s, "/?#"); j >= 0 {
-			s = s[:j]
+// prSelector is a parsed PR selector.
+type prSelector struct {
+	number int           // > 0 when the selector names a PR by number
+	repo   *cmdutil.Repo // set when the selector was a URL
+}
+
+// parsePRSelector accepts "42", "#42", a branch name, or a bitbucket.org
+// pull request URL (https://bitbucket.org/{ws}/{slug}/pull-requests/{n}...).
+// URLs for other hosts or with an unexpected path are rejected rather than
+// silently reduced to a number.
+func parsePRSelector(s string) (prSelector, error) {
+	if strings.Contains(s, "://") {
+		u, err := url.Parse(s)
+		if err != nil {
+			return prSelector{}, fmt.Errorf("invalid pull request URL %q", s)
 		}
+		host := strings.ToLower(u.Hostname())
+		if u.Scheme != "https" || (host != "bitbucket.org" && host != "www.bitbucket.org") {
+			return prSelector{}, fmt.Errorf("not a bitbucket.org pull request URL: %q", s)
+		}
+		parts := strings.Split(strings.Trim(u.Path, "/"), "/")
+		if len(parts) < 4 || parts[2] != "pull-requests" || !gitctx.ValidName(parts[0]) || !gitctx.ValidName(parts[1]) {
+			return prSelector{}, fmt.Errorf("not a pull request URL: %q (expected https://bitbucket.org/WORKSPACE/REPO/pull-requests/NUMBER)", s)
+		}
+		n, err := strconv.Atoi(parts[3])
+		if err != nil || n <= 0 {
+			return prSelector{}, fmt.Errorf("invalid pull request number in URL %q", s)
+		}
+		return prSelector{number: n, repo: &cmdutil.Repo{Workspace: parts[0], Slug: parts[1]}}, nil
 	}
-	n, err := strconv.Atoi(s)
-	if err != nil || n <= 0 {
+	if n, err := strconv.Atoi(strings.TrimPrefix(s, "#")); err == nil {
+		if n <= 0 {
+			return prSelector{}, fmt.Errorf("not a pull request number: %q", s)
+		}
+		return prSelector{number: n}, nil
+	}
+	return prSelector{}, nil // branch name
+}
+
+// parsePRNumber returns the PR number for numeric or URL selectors.
+func parsePRNumber(s string) (int, error) {
+	sel, err := parsePRSelector(s)
+	if err != nil {
+		return 0, err
+	}
+	if sel.number == 0 {
 		return 0, fmt.Errorf("not a pull request number: %q", s)
 	}
-	return n, nil
+	return sel.number, nil
 }
 
 // currentUser fetches the authenticated user (for @me).

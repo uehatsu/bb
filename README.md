@@ -172,6 +172,11 @@ Commands operate on the repository of the current directory's git remote
 - `bb pr checks --watch` redraws the table on a TTY and accepts `--timeout`;
   `bb pipeline watch --exit-status=false` returns 0 even when the pipeline
   fails.
+- Pull request selectors accept a number, `#number`, a branch name, or a
+  bitbucket.org pull request URL. A URL always targets the repository named
+  in the URL (like gh); URLs for other hosts are rejected.
+- Destructive commands (`repo delete`, `branch delete`) require `--yes` when
+  not running interactively.
 - Reviewers (`--reviewer`) are resolved by nickname via a server-side filter
   when available, with a fallback scan of workspace members; `{uuid}` values
   are accepted as-is.

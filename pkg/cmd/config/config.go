@@ -73,14 +73,12 @@ func newCmdSet(f *cmdutil.Factory) *cobra.Command {
 				return err
 			}
 			if args[0] == "credential_store" {
-				if err := migrateCredentials(f, cfg, args[1]); err != nil {
-					return err
-				}
+				return migrateCredentials(f, cfg, args[1])
 			}
 			if err := cfg.Set(args[0], args[1]); err != nil {
 				return cmdutil.FlagErrorWrap(err)
 			}
-			return cfg.Write()
+			return writeConfig(cfg)
 		},
 	}
 }
@@ -104,8 +102,18 @@ func newCmdList(f *cmdutil.Factory) *cobra.Command {
 	}
 }
 
-// migrateCredentials moves the stored credential from the current store to
-// the newly selected one so switching backends does not log the user out.
+// writeConfig persists the configuration; a variable so tests can inject
+// write failures.
+var writeConfig = func(cfg *bbconfig.Config) error { return cfg.Write() }
+
+// migrateCredentials switches the credential store, moving the stored
+// credential along. The order is chosen so that no step can leave the user
+// logged out:
+//
+//  1. copy the credential into the target store
+//  2. persist the config change (on failure: remove the copy, keep the old)
+//  3. verify the credential resolves from the target store
+//  4. only then delete it from the old store (failure here is a warning)
 func migrateCredentials(f *cmdutil.Factory, cfg *bbconfig.Config, target string) error {
 	if err := bbconfig.ValidateValue("credential_store", target); err != nil {
 		return cmdutil.FlagErrorWrap(err)
@@ -114,11 +122,10 @@ func migrateCredentials(f *cmdutil.Factory, cfg *bbconfig.Config, target string)
 	if current == target {
 		return nil
 	}
-	cred, err := cfg.Credentials().Get(bbconfig.DefaultHost)
-	if errors.Is(err, bbconfig.ErrNotFound) {
-		return nil
-	}
-	if err != nil {
+	old := cfg.Credentials()
+	cred, err := old.Get(bbconfig.DefaultHost)
+	hasCred := err == nil
+	if err != nil && !errors.Is(err, bbconfig.ErrNotFound) {
 		return err
 	}
 	var dst bbconfig.CredentialStore
@@ -127,10 +134,33 @@ func migrateCredentials(f *cmdutil.Factory, cfg *bbconfig.Config, target string)
 	} else {
 		dst = bbconfig.NewFileCredentialStore(bbconfig.Dir())
 	}
-	if err := dst.Set(bbconfig.DefaultHost, cred); err != nil {
-		return fmt.Errorf("copying credential to %s store: %w", target, err)
+
+	// 1. copy
+	if hasCred {
+		if err := dst.Set(bbconfig.DefaultHost, cred); err != nil {
+			return fmt.Errorf("copying credential to %s store: %w", target, err)
+		}
 	}
-	if err := cfg.Credentials().Delete(bbconfig.DefaultHost); err != nil {
+	// 2. persist config; roll back the copy on failure
+	if err := cfg.Set("credential_store", target); err != nil {
+		return cmdutil.FlagErrorWrap(err)
+	}
+	if err := writeConfig(cfg); err != nil {
+		_ = cfg.Set("credential_store", current)
+		if hasCred {
+			_ = dst.Delete(bbconfig.DefaultHost)
+		}
+		return fmt.Errorf("saving config: %w (credential store left unchanged)", err)
+	}
+	if !hasCred {
+		return nil
+	}
+	// 3. verify the new store serves the credential before removing the old copy
+	if got, err := dst.Get(bbconfig.DefaultHost); err != nil || got.Token != cred.Token {
+		return fmt.Errorf("credential store switched to %s, but the credential could not be read back (%v); the old copy in %s was kept — run `bb auth login` if commands report you are logged out", target, err, current)
+	}
+	// 4. remove the old copy
+	if err := old.Delete(bbconfig.DefaultHost); err != nil {
 		fmt.Fprintf(f.IOStreams.ErrOut, "warning: credential copied to %s but could not be removed from %s: %v\n", target, current, err)
 	}
 	fmt.Fprintf(f.IOStreams.ErrOut, "%s Moved credential from %s to %s store\n", f.IOStreams.ColorScheme().SuccessIcon(), current, target)

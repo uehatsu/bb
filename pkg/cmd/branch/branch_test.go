@@ -61,3 +61,31 @@ func TestBranchCommands(t *testing.T) {
 		t.Errorf("delete: %v %s", err, deleted)
 	}
 }
+
+func TestDeleteRequiresYesWhenNotInteractive(t *testing.T) {
+	h := testutil.NewHarness(t)
+	deleted := false
+	h.Handle("/repositories/acme/widgets/refs/branches/feat%2Fx", func(w http.ResponseWriter, r *http.Request) {
+		deleted = true
+		w.WriteHeader(204)
+	})
+	d := NewCmdDelete(h.Factory)
+	d.SetArgs([]string{"feat/x"})
+	if err := d.Execute(); err == nil || deleted {
+		t.Errorf("non-interactive delete without --yes must fail before calling the API: err=%v deleted=%v", err, deleted)
+	}
+	// interactive: declined confirmation → cancel, no delete
+	h.SetTTY(true)
+	h.Prompt.Confirms = []bool{false}
+	d = NewCmdDelete(h.Factory)
+	d.SetArgs([]string{"feat/x"})
+	if err := d.Execute(); err == nil || deleted {
+		t.Errorf("declined confirmation must not delete: err=%v deleted=%v", err, deleted)
+	}
+	h.Prompt.Confirms = []bool{true}
+	d = NewCmdDelete(h.Factory)
+	d.SetArgs([]string{"feat/x"})
+	if err := d.Execute(); err != nil || !deleted {
+		t.Errorf("confirmed delete: err=%v deleted=%v", err, deleted)
+	}
+}

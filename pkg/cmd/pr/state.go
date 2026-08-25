@@ -150,7 +150,7 @@ func withPR(ctx context.Context, f *cmdutil.Factory, selector string, fn prFunc)
 	if err != nil {
 		return err
 	}
-	pr, err := resolvePR(ctx, f, client, repo, selector)
+	pr, repo, err := resolvePR(ctx, f, client, repo, selector)
 	if err != nil {
 		return err
 	}
