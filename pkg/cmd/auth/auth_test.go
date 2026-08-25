@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -31,11 +32,15 @@ func testFactory(t *testing.T, handler http.Handler) (*cmdutil.Factory, *config.
 		srv := httptest.NewServer(handler)
 		t.Cleanup(srv.Close)
 		f.APIClient = func() (*api.Client, error) {
-			cred, err := config.ResolveCredential(cfg.Credentials(), config.DefaultHost, func(string) string { return "" })
+			c, err := f.Config()
+			if err != nil {
+				return nil, err
+			}
+			cred, err := config.ResolveCredential(c.Credentials(), config.DefaultHost, os.Getenv)
 			if err != nil {
 				return nil, cmdutil.NewAuthError("")
 			}
-			return api.NewClient(api.NewAuthenticator(cred), api.WithBaseURL(srv.URL+"/2.0")), nil
+			return api.NewClient(api.NewAuthenticator(cred), api.WithBaseURL(srv.URL+"/2.0"), api.WithNoRetry(true)), nil
 		}
 		t.Setenv("BB_TEST_SERVER", srv.URL)
 	}

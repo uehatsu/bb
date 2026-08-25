@@ -95,10 +95,12 @@ type Stub struct {
 	Editors      []string
 }
 
+// pop returns the next scripted answer; running out of answers is treated
+// as the user aborting the prompt.
 func pop[T any](s *[]T) (T, error) {
 	var zero T
 	if len(*s) == 0 {
-		return zero, errors.New("prompt stub exhausted")
+		return zero, ErrCancelled
 	}
 	v := (*s)[0]
 	*s = (*s)[1:]
