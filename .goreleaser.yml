@@ -45,6 +45,12 @@ brews:
     repository:
       owner: uehatsu
       name: homebrew-tap
+      # GITHUB_TOKEN cannot write to another repository; use the PAT secret.
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    commit_author:
+      name: Hatsuhito UENO
+      email: ueno@uehatsu.info
     homepage: https://github.com/uehatsu/bb
     description: "Bitbucket Cloud CLI with GitHub CLI ergonomics"
     license: MIT
