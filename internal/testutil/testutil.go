@@ -3,10 +3,12 @@ package testutil
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/cmdutil"
@@ -34,6 +36,7 @@ type Harness struct {
 func NewHarness(t *testing.T) *Harness {
 	t.Helper()
 	IsolateEnv(t)
+	InstantPolling(t)
 	mux := http.NewServeMux()
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -54,6 +57,15 @@ func NewHarness(t *testing.T) *Harness {
 		Prompter:  stub,
 	}
 	return &Harness{Factory: f, Config: cfg, In: in, Out: out, ErrOut: errOut, Server: srv, Mux: mux, Prompt: stub}
+}
+
+// InstantPolling makes api.Poll skip its sleeps for the duration of the test
+// (ctx cancellation is still honored).
+func InstantPolling(t *testing.T) {
+	t.Helper()
+	orig := api.PollSleep
+	api.PollSleep = func(ctx context.Context, _ time.Duration) error { return ctx.Err() }
+	t.Cleanup(func() { api.PollSleep = orig })
 }
 
 // IsolateEnv clears every bb-related environment variable so tests never

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/testutil"
 )
 
@@ -175,5 +176,54 @@ func TestCreateWebURL(t *testing.T) {
 	cmd.SetArgs([]string{"--web", "--head", "feat/x", "--base", "develop", "--title", "Hi there"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestResolveReviewersUsesFilterThenFallback(t *testing.T) {
+	h := testutil.NewHarness(t)
+	var queries []string
+	h.Handle("/workspaces/acme/members", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query().Get("q")
+		queries = append(queries, q)
+		switch {
+		case strings.Contains(q, `"alice"`):
+			w.Write([]byte(`{"values":[{"user":{"uuid":"{alice}","nickname":"alice"}}]}`))
+		case q != "":
+			w.Write([]byte(`{"values":[]}`))
+		default:
+			w.Write([]byte(`{"values":[{"user":{"uuid":"{alice}","nickname":"alice"}},{"user":{"uuid":"{bob}","nickname":"bobby","display_name":"Bob B"}}]}`))
+		}
+	})
+	client, _ := h.Factory.APIClient()
+	repo := cmdutil.Repo{Workspace: "acme", Slug: "widgets"}
+	got, err := resolveReviewers(t.Context(), client, repo, []string{"alice", "{direct-uuid}"}, false)
+	if err != nil || len(got) != 2 {
+		t.Fatalf("filter path: %v %v", got, err)
+	}
+	if len(queries) != 1 || !strings.Contains(queries[0], "alice") {
+		t.Errorf("expected one filtered query, got %v", queries)
+	}
+	// display-name match forces the scan fallback
+	queries = nil
+	got, err = resolveReviewers(t.Context(), client, repo, []string{"Bob B"}, false)
+	if err != nil || len(got) != 1 || got[0] != "{bob}" {
+		t.Fatalf("scan fallback: %v %v", got, err)
+	}
+	if len(queries) != 2 || queries[1] != "" {
+		t.Errorf("expected filter then full scan, got %v", queries)
+	}
+	// 400 on q= → scan
+	h2 := testutil.NewHarness(t)
+	h2.Handle("/workspaces/acme/members", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("q") != "" {
+			w.WriteHeader(400)
+			w.Write([]byte(`{"type":"error","error":{"message":"unsupported filter"}}`))
+			return
+		}
+		w.Write([]byte(`{"values":[{"user":{"uuid":"{alice}","nickname":"alice"}}]}`))
+	})
+	client2, _ := h2.Factory.APIClient()
+	if got, err := resolveReviewers(t.Context(), client2, repo, []string{"alice"}, false); err != nil || len(got) != 1 {
+		t.Errorf("400 fallback: %v %v", got, err)
 	}
 }

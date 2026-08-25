@@ -2,6 +2,7 @@ package pr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -73,12 +74,30 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 					}
 				}
 				if len(removeReviewers) > 0 {
-					uuids, err := resolveReviewers(ctx, client, repo, removeReviewers, false)
-					if err != nil {
-						return err
+					// Match against the PR's own reviewer list first so people who
+					// have since left the workspace can still be removed.
+					var unresolved []string
+					for _, name := range removeReviewers {
+						n := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(name), "@"))
+						matched := false
+						for _, r := range pr.Reviewers {
+							if n == strings.ToLower(r.Nickname) || n == strings.ToLower(r.DisplayName) || n == strings.ToLower(r.UUID) {
+								delete(current, r.UUID)
+								matched = true
+							}
+						}
+						if !matched {
+							unresolved = append(unresolved, name)
+						}
 					}
-					for _, u := range uuids {
-						delete(current, u)
+					if len(unresolved) > 0 {
+						uuids, err := resolveReviewers(ctx, client, repo, unresolved, false)
+						if err != nil {
+							return err
+						}
+						for _, u := range uuids {
+							delete(current, u)
+						}
 					}
 				}
 				var rs []map[string]string

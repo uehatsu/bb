@@ -390,3 +390,25 @@ func TestReviewActionBeforeComment(t *testing.T) {
 		t.Errorf("failed approve must not leave a comment: err=%v commented=%v", err, commented)
 	}
 }
+
+func TestEditRemoveReviewerWhoLeftWorkspace(t *testing.T) {
+	h := testutil.NewHarness(t)
+	var putBody string
+	h.Handle("/repositories/acme/widgets/pullrequests/42", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "PUT" {
+			b, _ := io.ReadAll(r.Body)
+			putBody = string(b)
+		}
+		w.Write([]byte(strings.Replace(prJSON, `"reviewers":[{"nickname":"bob"}]`, `"reviewers":[{"nickname":"bob","uuid":"{bob}"},{"nickname":"gone","uuid":"{gone}"}]`, 1)))
+	})
+	// members endpoint no longer lists "gone"; it must not be consulted for them
+	h.JSON("GET", "/workspaces/acme/members", 200, `{"values":[{"user":{"uuid":"{bob}","nickname":"bob"}}]}`)
+	e := NewCmdEdit(h.Factory)
+	e.SetArgs([]string{"42", "--remove-reviewer", "gone"})
+	if err := e.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(putBody, `"reviewers":[{"uuid":"{bob}"}]`) {
+		t.Errorf("put body: %s", putBody)
+	}
+}

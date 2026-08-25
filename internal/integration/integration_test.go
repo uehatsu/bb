@@ -85,3 +85,81 @@ func TestRepositoryAndPullRequests(t *testing.T) {
 		t.Log("NOTE: /user/permissions/repositories responded 2xx; CHANGE-2770 assumptions may be outdated")
 	}
 }
+
+// TestPullRequestPartialUpdate verifies the assumption that PUT on a pull
+// request accepts {title, draft} (bb pr ready) and {title, description}
+// (bb pr edit). Requires BB_INTEGRATION_WRITE=1 and BB_INTEGRATION_PR=<id>
+// on BB_INTEGRATION_REPO; the PR is left unchanged (draft toggled twice).
+func TestPullRequestPartialUpdate(t *testing.T) {
+	c := client(t)
+	if os.Getenv("BB_INTEGRATION_WRITE") != "1" || os.Getenv("BB_INTEGRATION_PR") == "" {
+		t.Skip("set BB_INTEGRATION_WRITE=1 and BB_INTEGRATION_PR to run")
+	}
+	ws, slug, _ := strings.Cut(os.Getenv("BB_INTEGRATION_REPO"), "/")
+	path := "/repositories/" + ws + "/" + slug + "/pullrequests/" + os.Getenv("BB_INTEGRATION_PR")
+	ctx := context.Background()
+	var pr bitbucket.PullRequest
+	if _, err := c.Do(ctx, api.Request{Path: path}, &pr); err != nil {
+		t.Fatal(err)
+	}
+	for _, draft := range []bool{!pr.Draft, pr.Draft} {
+		var out bitbucket.PullRequest
+		if _, err := c.Do(ctx, api.Request{Method: "PUT", Path: path, Body: map[string]any{"title": pr.Title, "draft": draft}}, &out); err != nil {
+			t.Fatalf("PUT {title, draft}: %v", err)
+		}
+		if out.Draft != draft {
+			t.Errorf("draft not applied: want %v got %v", draft, out.Draft)
+		}
+	}
+	var out bitbucket.PullRequest
+	if _, err := c.Do(ctx, api.Request{Method: "PUT", Path: path, Body: map[string]any{"title": pr.Title, "description": pr.Description}}, &out); err != nil {
+		t.Fatalf("PUT {title, description}: %v", err)
+	}
+}
+
+// TestPipelineCommitTarget verifies the pipeline_commit_target payload shape
+// by triggering and immediately stopping a pipeline. Requires
+// BB_INTEGRATION_WRITE=1 and BB_INTEGRATION_COMMIT=<hash>.
+func TestPipelineCommitTarget(t *testing.T) {
+	c := client(t)
+	if os.Getenv("BB_INTEGRATION_WRITE") != "1" || os.Getenv("BB_INTEGRATION_COMMIT") == "" {
+		t.Skip("set BB_INTEGRATION_WRITE=1 and BB_INTEGRATION_COMMIT to run")
+	}
+	ws, slug, _ := strings.Cut(os.Getenv("BB_INTEGRATION_REPO"), "/")
+	base := "/repositories/" + ws + "/" + slug + "/pipelines"
+	ctx := context.Background()
+	body := map[string]any{"target": map[string]any{"type": "pipeline_commit_target", "commit": map[string]string{"type": "commit", "hash": os.Getenv("BB_INTEGRATION_COMMIT")}}}
+	var p bitbucket.Pipeline
+	if _, err := c.Do(ctx, api.Request{Method: "POST", Path: base, Body: body}, &p); err != nil {
+		t.Fatalf("POST pipeline_commit_target: %v", err)
+	}
+	if _, err := c.Do(ctx, api.Request{Method: "POST", Path: base + "/" + p.UUID + "/stopPipeline"}, nil); err != nil {
+		t.Logf("could not stop pipeline #%d: %v", p.BuildNumber, err)
+	}
+}
+
+// TestWorkspaceMembersFilter documents whether /workspaces/{ws}/members
+// accepts a q= filter on user.nickname (used by bb pr create --reviewer).
+func TestWorkspaceMembersFilter(t *testing.T) {
+	c := client(t)
+	full := os.Getenv("BB_INTEGRATION_REPO")
+	if full == "" {
+		t.Skip("BB_INTEGRATION_REPO not set")
+	}
+	ws, _, _ := strings.Cut(full, "/")
+	ctx := context.Background()
+	var u bitbucket.User
+	if _, err := c.Do(ctx, api.Request{Path: "/user"}, &u); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	err := api.Paginate(ctx, c, "/workspaces/"+ws+"/members", api.ListOptions{Limit: 5, Query: "user.nickname=" + api.BBQLQuote(u.Nickname), Fields: "values.user.uuid,values.user.nickname,next"}, func(m bitbucket.WorkspaceMembership) error {
+		n++
+		return nil
+	})
+	if err != nil {
+		t.Logf("members q= filter NOT supported (%v); bb falls back to scanning", err)
+		return
+	}
+	t.Logf("members q= filter supported; %d match(es) for %s", n, u.Nickname)
+}

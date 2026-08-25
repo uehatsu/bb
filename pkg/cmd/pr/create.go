@@ -258,20 +258,16 @@ func resolveReviewers(ctx context.Context, client *api.Client, repo cmdutil.Repo
 		return out, nil
 	}
 	found := map[string]string{}
-	err := api.Paginate(ctx, client, fmt.Sprintf("/workspaces/%s/members", repo.Workspace), api.ListOptions{Fields: "values.user.uuid,values.user.nickname,values.user.display_name,next"}, func(m bitbucket.WorkspaceMembership) error {
-		key := strings.ToLower(m.User.Nickname)
-		if want[key] {
-			found[key] = m.User.UUID
-		} else if want[strings.ToLower(m.User.DisplayName)] {
-			found[strings.ToLower(m.User.DisplayName)] = m.User.UUID
+	// UUIDs may be given directly ({...}) and need no lookup.
+	for n := range want {
+		if strings.HasPrefix(n, "{") && strings.HasSuffix(n, "}") {
+			found[n] = n
 		}
-		if len(found) == len(want) {
-			return api.ErrStop
+	}
+	if len(found) < len(want) {
+		if err := lookupMembers(ctx, client, repo.Workspace, want, found); err != nil {
+			return nil, fmt.Errorf("looking up reviewers: %w", err)
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("looking up reviewers: %w", err)
 	}
 	var missing []string
 	for n := range want {
@@ -285,4 +281,58 @@ func resolveReviewers(ctx context.Context, client *api.Client, repo cmdutil.Repo
 		return nil, fmt.Errorf("reviewer(s) not found in workspace %s: %s", repo.Workspace, strings.Join(missing, ", "))
 	}
 	return out, nil
+}
+
+const memberFields = "values.user.uuid,values.user.nickname,values.user.display_name,next"
+
+// lookupMembers fills found (lowercased nickname/display name -> uuid) for
+// the wanted names. It first tries a server-side q= filter per name, which
+// keeps large workspaces cheap; if the endpoint rejects the filter (400) it
+// falls back to a single scan of all members.
+func lookupMembers(ctx context.Context, client *api.Client, workspace string, want map[string]bool, found map[string]string) error {
+	path := fmt.Sprintf("/workspaces/%s/members", workspace)
+	record := func(m bitbucket.WorkspaceMembership) {
+		for _, key := range []string{strings.ToLower(m.User.Nickname), strings.ToLower(m.User.DisplayName)} {
+			if key != "" && want[key] && found[key] == "" {
+				found[key] = m.User.UUID
+			}
+		}
+	}
+	filterSupported := true
+	for n := range want {
+		if found[n] != "" {
+			continue
+		}
+		q := api.BBQLAnd("user.nickname="+api.BBQLQuote(n), "") // exact nickname match
+		err := api.Paginate(ctx, client, path, api.ListOptions{Limit: 5, Query: q, Fields: memberFields}, func(m bitbucket.WorkspaceMembership) error {
+			record(m)
+			return nil
+		})
+		if err != nil {
+			var herr *api.HTTPError
+			if errors.As(err, &herr) && herr.StatusCode == 400 {
+				filterSupported = false
+				break
+			}
+			return err
+		}
+	}
+	if filterSupported {
+		for n := range want {
+			if found[n] == "" {
+				filterSupported = false // display-name matches need the scan
+				break
+			}
+		}
+	}
+	if filterSupported {
+		return nil
+	}
+	return api.Paginate(ctx, client, path, api.ListOptions{Fields: memberFields}, func(m bitbucket.WorkspaceMembership) error {
+		record(m)
+		if len(found) == len(want) {
+			return api.ErrStop
+		}
+		return nil
+	})
 }

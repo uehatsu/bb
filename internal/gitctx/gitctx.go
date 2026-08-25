@@ -132,7 +132,7 @@ func CloneURL(r Repo, protocol string) string {
 	if protocol == "ssh" {
 		return fmt.Sprintf("git@%s:%s/%s.git", SSHHost, r.Workspace, r.Slug)
 	}
-	return fmt.Sprintf("https://bitbucket.org/%s/%s.git", r.Workspace, r.Slug)
+	return fmt.Sprintf("%s/%s/%s.git", WebBase, r.Workspace, r.Slug)
 }
 
 // NormalizeCloneURL validates that href points at Bitbucket and rewrites it

@@ -5,9 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/spf13/cobra"
 
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/factory"
@@ -29,11 +32,17 @@ func run() int {
 	defer stop()
 	rootCmd.SetContext(ctx)
 	cmd, err := rootCmd.ExecuteC()
+	return exitCode(f.IOStreams.ErrOut, cmd, err, ctx.Err() != nil)
+}
+
+// exitCode maps a command error to the process exit status (gh conventions:
+// 0 ok, 1 error, 2 cancelled, 4 auth required, 8 pending).
+func exitCode(errOut io.Writer, cmd *cobra.Command, err error, interrupted bool) int {
 	if err == nil {
 		return cmdutil.ExitOK
 	}
-	if errors.Is(err, context.Canceled) || ctx.Err() != nil {
-		fmt.Fprintln(f.IOStreams.ErrOut, "\nbb: interrupted")
+	if errors.Is(err, context.Canceled) || interrupted {
+		fmt.Fprintln(errOut, "\nbb: interrupted")
 		return cmdutil.ExitCancel
 	}
 
@@ -41,7 +50,7 @@ func run() int {
 		return cmdutil.ExitError
 	}
 	if cmdutil.IsUserCancellation(err) {
-		fmt.Fprintln(f.IOStreams.ErrOut)
+		fmt.Fprintln(errOut)
 		return cmdutil.ExitCancel
 	}
 	if errors.Is(err, cmdutil.ErrPending) {
@@ -49,16 +58,18 @@ func run() int {
 	}
 	var authErr *cmdutil.AuthError
 	if errors.As(err, &authErr) {
-		fmt.Fprintln(f.IOStreams.ErrOut, authErr.Error())
+		fmt.Fprintln(errOut, authErr.Error())
 		return cmdutil.ExitAuth
 	}
 	var flagErr *cmdutil.FlagError
 	if errors.As(err, &flagErr) {
-		fmt.Fprintln(f.IOStreams.ErrOut, err)
-		fmt.Fprintln(f.IOStreams.ErrOut)
-		_ = cmd.Usage()
+		fmt.Fprintln(errOut, err)
+		fmt.Fprintln(errOut)
+		if cmd != nil {
+			_ = cmd.Usage()
+		}
 		return cmdutil.ExitError
 	}
-	fmt.Fprintln(f.IOStreams.ErrOut, err)
+	fmt.Fprintln(errOut, err)
 	return cmdutil.ExitError
 }

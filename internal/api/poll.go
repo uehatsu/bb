@@ -30,11 +30,15 @@ func (o PollOptions) withDefaults() PollOptions {
 // ErrPollTimeout is returned when the deadline elapses.
 var ErrPollTimeout = errors.New("timed out waiting for operation to complete")
 
+// PollSleep is the sleep function Poll uses; tests replace it to run
+// polling loops instantly (see testutil.NewHarness).
+var PollSleep = sleepCtx
+
 // Poll calls fn until it returns done=true or an error. HTTP 429 errors from
 // fn are treated as transient: the interval is grown and polling continues.
 // Any other error aborts. Cancellation of ctx returns ctx.Err().
 func Poll(ctx context.Context, opts PollOptions, fn func(ctx context.Context) (done bool, err error)) error {
-	return pollWith(ctx, opts, sleepCtx, fn)
+	return pollWith(ctx, opts, PollSleep, fn)
 }
 
 func pollWith(ctx context.Context, opts PollOptions, sleep func(context.Context, time.Duration) error, fn func(context.Context) (bool, error)) error {
