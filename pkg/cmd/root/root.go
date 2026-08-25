@@ -10,10 +10,13 @@ import (
 	authCmd "github.com/uehatsu/bb/pkg/cmd/auth"
 	branchCmd "github.com/uehatsu/bb/pkg/cmd/branch"
 	browseCmd "github.com/uehatsu/bb/pkg/cmd/browse"
+	configCmd "github.com/uehatsu/bb/pkg/cmd/config"
 	pipelineCmd "github.com/uehatsu/bb/pkg/cmd/pipeline"
 	prCmd "github.com/uehatsu/bb/pkg/cmd/pr"
+	projectCmd "github.com/uehatsu/bb/pkg/cmd/project"
 	repoCmd "github.com/uehatsu/bb/pkg/cmd/repo"
 	versionCmd "github.com/uehatsu/bb/pkg/cmd/version"
+	workspaceCmd "github.com/uehatsu/bb/pkg/cmd/workspace"
 )
 
 // NewCmdRoot builds the root command with all subcommands attached.
@@ -42,6 +45,9 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 		prCmd.NewCmdPR(f),
 		pipelineCmd.NewCmdPipeline(f),
 		branchCmd.NewCmdBranch(f),
+		workspaceCmd.NewCmdWorkspace(f),
+		projectCmd.NewCmdProject(f),
+		configCmd.NewCmdConfig(f),
 		versionCmd.NewCmdVersion(f),
 	)
 
