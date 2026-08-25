@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/config"
+	"github.com/uehatsu/bb/internal/oauth"
 )
 
 // LoginOptions holds flags for `bb auth login`.
@@ -24,9 +26,12 @@ type LoginOptions struct {
 	Email     string
 	ExpiresIn string
 	Web       bool
+	ClientID  string
+	Port      int
 
 	// for tests
 	newClient func(config.Credential) *api.Client
+	authorize func(ctx context.Context, cfg oauth.Config, open func(string) error) (*oauth.Token, error)
 }
 
 // NewCmdLogin returns the login command.
@@ -53,12 +58,19 @@ Use --with-token to read the token from standard input, e.g.
 Use --bearer for repository/project/workspace access tokens, which are sent as
 Bearer tokens and do not need an email.
 
+Use --web to log in through OAuth 2.0 in the browser. Bitbucket has no device
+flow and requires a client secret, so you must first register an OAuth
+consumer (workspace settings → OAuth consumers) with callback URL
+http://127.0.0.1:8976/callback and the scopes you need. Provide the consumer
+via --client-id / BB_OAUTH_CLIENT_ID and BB_OAUTH_CLIENT_SECRET (prompted when
+unset). Access tokens expire after 2 hours and are refreshed automatically.
+
 Recommended scopes:
 %s`, TokenURL, config.Dir(), scopeTable()),
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.Web {
-				return errors.New("--web (OAuth) is not implemented yet; use an API token")
+				return runLoginWeb(cmd.Context(), f, opts)
 			}
 			if !opts.WithToken && !f.IOStreams.CanPrompt() {
 				return cmdutil.FlagErrorf("--with-token required when not running interactively")
@@ -70,7 +82,9 @@ Recommended scopes:
 	cmd.Flags().BoolVar(&opts.Bearer, "bearer", false, "Token is a repository/project/workspace access token (Bearer)")
 	cmd.Flags().StringVar(&opts.Email, "email", "", "Atlassian account email (for API tokens)")
 	cmd.Flags().StringVar(&opts.ExpiresIn, "expires-in", "", "Token lifetime for expiry warnings, e.g. 90d, 1y (optional)")
-	cmd.Flags().BoolVar(&opts.Web, "web", false, "Log in via OAuth in a browser (not yet supported)")
+	cmd.Flags().BoolVar(&opts.Web, "web", false, "Log in via OAuth 2.0 in a browser (requires your own OAuth consumer)")
+	cmd.Flags().StringVar(&opts.ClientID, "client-id", "", "OAuth consumer key (or BB_OAUTH_CLIENT_ID / oauth_client_id config)")
+	cmd.Flags().IntVar(&opts.Port, "port", 0, "Loopback port for the OAuth callback (default 8976 or oauth_port config)")
 	return cmd
 }
 
@@ -201,4 +215,97 @@ func parseLifetime(s string) (time.Duration, error) {
 		return 0, fmt.Errorf("invalid lifetime %q (examples: 90d, 12w, 1y)", s)
 	}
 	return d, nil
+}
+
+// runLoginWeb performs the OAuth 2.0 authorization code flow.
+func runLoginWeb(ctx context.Context, f *cmdutil.Factory, opts *LoginOptions) error {
+	ios := f.IOStreams
+	cs := ios.ColorScheme()
+	cfg, err := f.Config()
+	if err != nil {
+		return err
+	}
+	clientID := strings.TrimSpace(opts.ClientID)
+	if clientID == "" {
+		clientID = strings.TrimSpace(os.Getenv("BB_OAUTH_CLIENT_ID"))
+	}
+	if clientID == "" {
+		clientID, _ = cfg.Get("oauth_client_id")
+	}
+	secret := strings.TrimSpace(os.Getenv("BB_OAUTH_CLIENT_SECRET"))
+	// Reuse a previously stored consumer for the same client id.
+	if prev, err := cfg.Credentials().Get(config.DefaultHost); err == nil && prev.Method == config.AuthOAuth {
+		if clientID == "" {
+			clientID = prev.ClientID
+		}
+		if secret == "" && prev.ClientID == clientID {
+			secret = prev.ClientSecret
+		}
+	}
+	if clientID == "" || secret == "" {
+		if !ios.CanPrompt() {
+			return cmdutil.FlagErrorf("--client-id (or BB_OAUTH_CLIENT_ID) and BB_OAUTH_CLIENT_SECRET are required when not running interactively")
+		}
+		if clientID == "" {
+			if clientID, err = f.Prompter.Input("OAuth consumer key", ""); err != nil {
+				return cmdutil.ErrCancel
+			}
+			clientID = strings.TrimSpace(clientID)
+		}
+		if secret == "" {
+			if secret, err = f.Prompter.Password("OAuth consumer secret"); err != nil {
+				return cmdutil.ErrCancel
+			}
+			secret = strings.TrimSpace(secret)
+		}
+	}
+	if clientID == "" || secret == "" {
+		return errors.New("OAuth consumer key and secret must not be empty")
+	}
+	port := opts.Port
+	if port == 0 {
+		if v, _ := cfg.Get("oauth_port"); v != "" {
+			fmt.Sscanf(v, "%d", &port) //nolint:errcheck
+		}
+	}
+	ocfg := oauth.Config{ClientID: clientID, ClientSecret: secret, Port: port}
+	fmt.Fprintf(ios.ErrOut, "%s The OAuth consumer's callback URL must be %s\n", cs.Yellow("!"), ocfg.CallbackURL())
+
+	authorize := opts.authorize
+	if authorize == nil {
+		authorize = oauth.Authorize
+	}
+	open := func(u string) error {
+		fmt.Fprintf(ios.ErrOut, "Opening your browser to authorize bb. If it does not open, visit:\n  %s\n", u)
+		if err := cmdutil.OpenBrowser(f, u); err != nil {
+			fmt.Fprintf(ios.ErrOut, "%s could not open browser: %v\n", cs.WarningIcon(), err)
+		}
+		return nil
+	}
+	tok, err := authorize(ctx, ocfg, open)
+	if err != nil {
+		return err
+	}
+	cred := config.Credential{
+		Method:       config.AuthOAuth,
+		Token:        tok.AccessToken,
+		RefreshToken: tok.RefreshToken,
+		ExpiresAt:    &tok.ExpiresAt,
+		ClientID:     clientID,
+		ClientSecret: secret,
+	}
+	newClient := opts.newClient
+	if newClient == nil {
+		newClient = func(c config.Credential) *api.Client { return api.NewClient(api.NewAuthenticator(c)) }
+	}
+	var user bitbucket.User
+	if _, err := newClient(cred).Do(ctx, api.Request{Path: "/user"}, &user); err != nil {
+		return fmt.Errorf("token verification failed: %w (does the consumer have the 'account' scope?)", err)
+	}
+	cred.User = user.Name()
+	if err := cfg.Credentials().Set(config.DefaultHost, cred); err != nil {
+		return fmt.Errorf("saving credentials: %w", err)
+	}
+	fmt.Fprintf(ios.ErrOut, "%s Logged in to bitbucket.org as %s via OAuth (scopes: %s)\n", cs.SuccessIcon(), cs.Bold(user.Name()), tok.Scopes)
+	return nil
 }

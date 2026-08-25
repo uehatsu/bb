@@ -18,13 +18,16 @@ const DefaultHost = "bitbucket.org"
 
 // Known configuration keys and their defaults.
 var defaults = map[string]string{
-	"workspace":      "",
-	"git_protocol":   "https",
-	"editor":         "",
-	"pager":          "",
-	"prompt":         "enabled",
-	"merge_strategy": "merge_commit",
-	"browser":        "",
+	"workspace":        "",
+	"git_protocol":     "https",
+	"editor":           "",
+	"pager":            "",
+	"prompt":           "enabled",
+	"merge_strategy":   "merge_commit",
+	"browser":          "",
+	"credential_store": "file",
+	"oauth_client_id":  "",
+	"oauth_port":       "",
 }
 
 // ValidateKey returns an error if key is not a known configuration key.
@@ -45,6 +48,10 @@ func ValidateValue(key, value string) error {
 	case "prompt":
 		if value != "enabled" && value != "disabled" {
 			return fmt.Errorf("invalid value %q for prompt (enabled|disabled)", value)
+		}
+	case "credential_store":
+		if value != StoreFile && value != StoreKeyring {
+			return fmt.Errorf("invalid value %q for credential_store (file|keyring)", value)
 		}
 	case "merge_strategy":
 		switch value {
@@ -101,7 +108,11 @@ func LoadFrom(dir string) (*Config, error) {
 			c.values[k] = v
 		}
 	}
-	c.store = NewFileCredentialStore(dir)
+	store, err := selectStore(dir, c.values["credential_store"])
+	if err != nil {
+		return nil, err
+	}
+	c.store = store
 	return c, nil
 }
 

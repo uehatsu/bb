@@ -201,5 +201,5 @@ bb/
 
 ## 9. 進捗（2026-08-25）
 - Step 0〜11 実装済み（v0.1 + v0.2 相当）。全コマンドに httptest ベースのユニットテストあり、golangci-lint 0 件。
-- 未着手: Step 12（OAuth 2.0 `--web` ログイン、OS keyring バックエンド）。`CredentialStore` / `Authenticator` の抽象は用意済み。
+- Step 12 実装済み: `bb auth login --web`（Authorization Code、state 検証、127.0.0.1 固定ポート、ワンショット）、`bb auth refresh`、Factory での自動 refresh、`credential_store=keyring`（zalando/go-keyring）。
 - 実 API に対する smoke（`bb auth login` → `pr create` → `merge`）は API Token を用意した上で手動確認が必要。

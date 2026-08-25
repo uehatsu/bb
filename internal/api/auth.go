@@ -15,7 +15,7 @@ type Authenticator interface {
 // NewAuthenticator builds an Authenticator from a Credential.
 func NewAuthenticator(c config.Credential) Authenticator {
 	switch c.Method {
-	case config.AuthBearer:
+	case config.AuthBearer, config.AuthOAuth:
 		return bearerAuth{token: c.Token}
 	default:
 		return basicAuth{user: c.Email, pass: c.Token}

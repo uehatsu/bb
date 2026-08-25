@@ -27,7 +27,10 @@ Keys:
   editor          editor for multi-line prompts
   pager           pager for long output (e.g. "less -R")
   browser         browser command for --web
-  prompt          enabled (default) | disabled`, bbconfig.Dir()),
+  prompt          enabled (default) | disabled
+  credential_store  file (default) | keyring   (where tokens are stored)
+  oauth_client_id   OAuth consumer key for 'bb auth login --web'
+  oauth_port        loopback port for the OAuth callback (default 8976)`, bbconfig.Dir()),
 	}
 	cmd.AddCommand(newCmdGet(f), newCmdSet(f), newCmdList(f))
 	return cmd

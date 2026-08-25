@@ -17,9 +17,11 @@ type AuthMethod string
 const (
 	// AuthAPIToken is an Atlassian API token: Basic auth with email:token.
 	AuthAPIToken AuthMethod = "api_token"
-	// AuthBearer is a repository/project/workspace access token (or OAuth
-	// access token) sent as a Bearer token.
+	// AuthBearer is a repository/project/workspace access token sent as a
+	// Bearer token.
 	AuthBearer AuthMethod = "bearer"
+	// AuthOAuth is an OAuth 2.0 access token (Bearer) with a refresh token.
+	AuthOAuth AuthMethod = "oauth"
 )
 
 // Credential holds an authentication secret for a host.
@@ -28,12 +30,26 @@ type Credential struct {
 	Email     string     `yaml:"email,omitempty"`
 	Token     string     `yaml:"token"`
 	User      string     `yaml:"user,omitempty"`       // Bitbucket username / nickname
-	ExpiresAt *time.Time `yaml:"expires_at,omitempty"` // user supplied, optional
+	ExpiresAt *time.Time `yaml:"expires_at,omitempty"` // user supplied (api_token) or server supplied (oauth)
+
+	// OAuth-only fields. The consumer secret lives here (never in config.yml).
+	RefreshToken string `yaml:"refresh_token,omitempty" json:"refresh_token,omitempty"`
+	ClientID     string `yaml:"client_id,omitempty" json:"client_id,omitempty"`
+	ClientSecret string `yaml:"client_secret,omitempty" json:"client_secret,omitempty"`
+}
+
+// IsBearer reports whether the token is sent as a Bearer token.
+func (c Credential) IsBearer() bool { return c.Method == AuthBearer || c.Method == AuthOAuth }
+
+// NeedsRefresh reports whether an OAuth access token is expired or about to
+// expire and should be refreshed before use.
+func (c Credential) NeedsRefresh(now time.Time) bool {
+	return c.Method == AuthOAuth && c.RefreshToken != "" && c.ExpiresAt != nil && now.Add(time.Minute).After(*c.ExpiresAt)
 }
 
 // GitUsername returns the fixed username git should send with the token.
 func (c Credential) GitUsername() string {
-	if c.Method == AuthBearer {
+	if c.IsBearer() {
 		return "x-token-auth"
 	}
 	return "x-bitbucket-api-token-auth"

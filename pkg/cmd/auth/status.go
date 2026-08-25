@@ -69,8 +69,14 @@ func runStatus(f *cmdutil.Factory, showToken bool) error {
 	fmt.Fprintln(io.Out)
 
 	method := "API token (Basic: email + token)"
-	if cred.Method == config.AuthBearer {
+	switch cred.Method {
+	case config.AuthBearer:
 		method = "Access token (Bearer)"
+	case config.AuthOAuth:
+		method = "OAuth 2.0 (Bearer, auto-refresh)"
+	}
+	if _, isKeyring := cfg.Credentials().(*config.KeyringCredentialStore); isKeyring && source == "hosts.yml" {
+		source = "keyring"
 	}
 	fmt.Fprintf(io.Out, "  - Auth method: %s\n", method)
 	fmt.Fprintf(io.Out, "  - Credential source: %s\n", source)

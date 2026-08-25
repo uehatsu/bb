@@ -22,6 +22,7 @@ Atlassian in July 2026 and are not supported.`,
 		NewCmdLogout(f),
 		NewCmdStatus(f),
 		NewCmdToken(f),
+		NewCmdRefresh(f),
 		NewCmdSetupGit(f),
 		NewCmdGitCredential(f),
 	)
