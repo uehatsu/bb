@@ -26,9 +26,7 @@ func New() *cmdutil.Factory {
 	f.Config = configFunc()
 	f.APIClient = apiClientFunc(f)
 	f.GitClient = func() (*git.Client, error) { return git.New("") }
-	f.BaseRepo = func() (cmdutil.Repo, error) {
-		return cmdutil.Repo{}, errors.New("repository resolution not configured")
-	}
+	f.BaseRepo = func() (cmdutil.Repo, error) { return cmdutil.RepoFromRemotes(f) }
 
 	applyPager(f, io)
 	return f

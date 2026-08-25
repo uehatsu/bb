@@ -6,7 +6,9 @@ import (
 
 	"github.com/uehatsu/bb/internal/build"
 	"github.com/uehatsu/bb/internal/cmdutil"
+	apiCmd "github.com/uehatsu/bb/pkg/cmd/api"
 	authCmd "github.com/uehatsu/bb/pkg/cmd/auth"
+	browseCmd "github.com/uehatsu/bb/pkg/cmd/browse"
 	versionCmd "github.com/uehatsu/bb/pkg/cmd/version"
 )
 
@@ -30,6 +32,8 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 
 	cmd.AddCommand(
 		authCmd.NewCmdAuth(f),
+		apiCmd.NewCmdAPI(f),
+		browseCmd.NewCmdBrowse(f),
 		versionCmd.NewCmdVersion(f),
 	)
 
