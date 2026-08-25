@@ -6,9 +6,11 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
@@ -20,9 +22,15 @@ func client(t *testing.T) *api.Client {
 	if os.Getenv("BB_INTEGRATION") != "1" {
 		t.Skip("set BB_INTEGRATION=1 to run integration tests")
 	}
-	cred, ok, err := config.EnvCredential(os.Getenv)
-	if err != nil || !ok {
-		t.Skipf("BB_TOKEN not configured: %v", err)
+	// BB_TOKEN/BB_EMAIL take precedence; otherwise the credential saved by
+	// `bb auth login` (hosts.yml or keyring) is used.
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("loading config: %v", err)
+	}
+	cred, err := config.ResolveFreshCredential(context.Background(), cfg.Credentials(), config.DefaultHost, os.Getenv, time.Now())
+	if err != nil {
+		t.Skipf("no credential: set BB_EMAIL/BB_TOKEN or run `bb auth login` (%v)", err)
 	}
 	return api.NewClient(api.NewAuthenticator(cred))
 }
@@ -54,14 +62,7 @@ func TestUserAndWorkspaces(t *testing.T) {
 
 func TestRepositoryAndPullRequests(t *testing.T) {
 	c := client(t)
-	full := os.Getenv("BB_INTEGRATION_REPO")
-	if full == "" {
-		t.Skip("BB_INTEGRATION_REPO not set")
-	}
-	ws, slug, ok := strings.Cut(full, "/")
-	if !ok {
-		t.Fatalf("BB_INTEGRATION_REPO must be WORKSPACE/REPO")
-	}
+	ws, slug := integrationRepo(t)
 	ctx := context.Background()
 	var r bitbucket.Repository
 	if _, err := c.Do(ctx, api.Request{Path: "/repositories/" + ws + "/" + slug}, &r); err != nil {
@@ -142,11 +143,7 @@ func TestPipelineCommitTarget(t *testing.T) {
 // accepts a q= filter on user.nickname (used by bb pr create --reviewer).
 func TestWorkspaceMembersFilter(t *testing.T) {
 	c := client(t)
-	full := os.Getenv("BB_INTEGRATION_REPO")
-	if full == "" {
-		t.Skip("BB_INTEGRATION_REPO not set")
-	}
-	ws, _, _ := strings.Cut(full, "/")
+	ws, _ := integrationRepo(t)
 	ctx := context.Background()
 	var u bitbucket.User
 	if _, err := c.Do(ctx, api.Request{Path: "/user"}, &u); err != nil {
@@ -158,8 +155,30 @@ func TestWorkspaceMembersFilter(t *testing.T) {
 		return nil
 	})
 	if err != nil {
-		t.Logf("members q= filter NOT supported (%v); bb falls back to scanning", err)
-		return
+		var herr *api.HTTPError
+		if errors.As(err, &herr) && herr.StatusCode == 400 {
+			t.Logf("members q= filter NOT supported (%v); bb falls back to scanning", err)
+			return
+		}
+		t.Fatalf("GET members: %v (check BB_INTEGRATION_REPO's workspace)", err)
 	}
 	t.Logf("members q= filter supported; %d match(es) for %s", n, u.Nickname)
+}
+
+// integrationRepo returns the workspace/slug under test, skipping when unset
+// and failing loudly when the README placeholder is still in place.
+func integrationRepo(t *testing.T) (string, string) {
+	t.Helper()
+	full := os.Getenv("BB_INTEGRATION_REPO")
+	if full == "" {
+		t.Skip("BB_INTEGRATION_REPO not set")
+	}
+	if full == "ws/repo" || full == "WORKSPACE/REPO" {
+		t.Fatalf("BB_INTEGRATION_REPO=%q is a placeholder; use a real workspace/repository (see `bb workspace list`, `bb repo list <ws>`)", full)
+	}
+	ws, slug, ok := strings.Cut(full, "/")
+	if !ok {
+		t.Fatalf("BB_INTEGRATION_REPO must be WORKSPACE/REPO")
+	}
+	return ws, slug
 }
