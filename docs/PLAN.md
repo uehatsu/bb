@@ -207,3 +207,7 @@ bb/
 ## 10. MAGI コードレビュー対応（2026-08-25）
 実装コード全体の MAGI 審議（MELCHIOR=APPROVE / BALTHASAR=CONDITIONAL / CASPER=CONDITIONAL）で挙がった 9 分類すべてに対応済み:
 `pr checkout` の修正と git Runner インターフェース化（回帰テスト追加）、OAuth refresh の `config.ResolveFreshCredential` への集約（API クライアント・git credential helper・`auth token` で共有）、OAuth callback の偽装要求を無視して待機継続、`pipeline watch --exit-status` 実装、`pr diff --color {always|never|auto}`、`signal.NotifyContext` による Ctrl-C=exit 2、`pr checks --watch` の Poll 化、remote/サーバー由来 URL・名前の検証、`pr ready/edit` の title 同梱、握りつぶしていたエラーの表面化、`--commit` の target 形式、`OpenBrowser`/`OptionalArg`/`MainBranch`/`gitctx.CloneURL` への集約、一覧の `fields` 指定、冗長な再取得の削減、gh と衝突する短縮フラグの整理、`bb api` の `-H --paginate`/`?` 対応、`credential_store` 切替時の資格情報移行、テスト環境変数の遮断。
+
+### MAGI 再審議（2026-08-25、3 回で完了）
+- 第 2 回: MELCHIOR=APPROVE / BALTHASAR=CONDITIONAL（fork PR の `decline --delete-branch` 誤削除）/ CASPER=APPROVE → `b2b7836` で修正（fork 拒否、`pr merge -b/--body`、review 順序、refreshingAuth、checks 再描画/--timeout、log 最終 fetch、秘密マスク、ブラウザ allowlist）
+- 第 3 回: **三体 APPROVE**（確信度 9/9/9）。残警告は UX/保守性の提案のみ（URL リテラル集約、fetchPR の fields、refresh 失敗警告の抑制、fork decline の文言）。
