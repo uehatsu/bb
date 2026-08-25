@@ -144,7 +144,7 @@ func TestStubRecordsEverything(t *testing.T) {
 func TestRunStreamsToTerminal(t *testing.T) {
 	c := newRepo(t)
 	devnull, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
-	defer devnull.Close()
+	defer func() { _ = devnull.Close() }()
 	c.Stdout, c.Stderr = devnull, devnull
 	if err := c.Run(context.Background(), "status"); err != nil {
 		t.Errorf("Run: %v", err)
