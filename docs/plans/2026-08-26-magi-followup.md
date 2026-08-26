@@ -65,3 +65,9 @@
 ## 4. リスク
 - root に `RunE` を持たせると cobra の `--version` 処理順が変わる可能性 → テストで `bb --version` の出力を固定
 - frontmatter から `user_invocable` / `trigger` を外すと `/bitbucket` が出なくなる可能性 → Step 5 で確認し、出なければ `name` だけで足りない証拠として戻す（Claude Code 公式のキーは `name` / `description` / `allowed-tools` / `disable-model-invocation`）
+
+## 5. 結果（2026-08-26）
+- プラン審議: 1 回目で三体 APPROVE（MELCHIOR 8 / BALTHASAR 8 / CASPER 8）。WARNINGS（AGENT_NAME は引数渡し、`git status --porcelain` で未追跡検出、"Did you mean" 提案、`.bak` 1 世代の注記、CHANGELOG のタグ検査）を実装に反映。
+- コミット: `9f15704`（Step 1）、`88ef5e7`（Step 2）、`55df9c5`（Step 3）、`a2784f4`（Step 4）。CI 全ジョブ成功。
+- `user_invocable` / `trigger` を外しても Claude Code のスキル一覧に `bitbucket` が表示されることを確認（Claude Code 2026-08 時点）。
+- v0.1.4 としてリリース。

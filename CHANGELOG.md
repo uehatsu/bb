@@ -6,6 +6,8 @@ All notable changes to `bb` are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-08-26
+
 ### Changed
 - Unknown subcommands now print a "Did you mean" suggestion, and `bb bogus`
   behaves like `bb pr bogus` (usage error, exit 1).
@@ -53,7 +55,8 @@ Initial release: `auth` (API tokens, access tokens, OAuth), `repo`, `pr`,
 `pipeline`, `branch`, `workspace`, `project`, `config`, `api`, `browse`, with
 `--json`/`--jq`/`--template` output and a git credential helper.
 
-[Unreleased]: https://github.com/uehatsu/bb/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/uehatsu/bb/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/uehatsu/bb/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/uehatsu/bb/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/uehatsu/bb/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/uehatsu/bb/compare/v0.1.0...v0.1.1
