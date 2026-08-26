@@ -201,8 +201,12 @@ make install-copilot-skill      # GitHub Copilot のみ
 ```
 
 プロジェクト限定にしたい場合は、そのプロジェクトの `.claude/skills/bitbucket/`（Claude Code）
-または `.github/skills/bitbucket/`（Copilot）にコピーしてください。3 つのファイルは本文が共通で、
-差分は front matter とエージェント名だけです。コマンドを追加・変更したときは 3 つとも更新してください。
+または `.github/skills/bitbucket/`（Copilot）にコピーしてください。
+
+3 つの `SKILL.md` は**生成物**です。共通本文は `skills/bitbucket.body.md`、エージェント別の
+front matter は `skills/<agent>/bitbucket/frontmatter.md` にあります。これらを編集して
+`make skills` を実行し、結果をコミットしてください。生成物が古いままだと CI（`make check-skills`）が
+失敗します（`skills/` 配下に未コミットの編集があるときも失敗します）。
 
 ## 開発
 

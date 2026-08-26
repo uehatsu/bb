@@ -25,6 +25,9 @@ jobs:
         run: |
           go run ./cmd/gendocs docs/reference
           git diff --exit-code -- docs/reference
+      - name: Check generated agent skills are up to date
+        if: runner.os == 'Linux'
+        run: make check-skills
 
   lint:
     runs-on: ubuntu-latest

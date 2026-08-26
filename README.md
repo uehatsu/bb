@@ -207,8 +207,13 @@ make install-copilot-skill      # GitHub Copilot only
 
 To scope a skill to one project instead, copy the file into that project's
 `.claude/skills/bitbucket/` (Claude Code) or `.github/skills/bitbucket/`
-(Copilot). The three files share one body and differ only in front matter and
-the agent's name; update all of them together when commands change.
+(Copilot).
+
+The three `SKILL.md` files are **generated**: the shared body lives in
+`skills/bitbucket.body.md` and each agent's front matter in
+`skills/<agent>/bitbucket/frontmatter.md`. Edit those, run `make skills`, and
+commit the result — CI fails (`make check-skills`) when the generated files are
+stale. Note that `check-skills` also fails on uncommitted edits under `skills/`.
 
 ## Development
 

@@ -1,8 +1,6 @@
 ---
 name: bitbucket
 description: "Operate Bitbucket Cloud from Claude Code through the `bb` CLI (GitHub CLI-like): repositories, pull requests, pipelines, branches, workspaces, projects, and raw API calls. Use when the user mentions Bitbucket, a bitbucket.org URL, a Bitbucket pull request / pipeline, or asks to do with Bitbucket what `gh` does for GitHub."
-user_invocable: true
-trigger: "/bitbucket"
 ---
 
 # Bitbucket Cloud via `bb`
@@ -36,8 +34,12 @@ bb auth status        # non-zero exit = not logged in -> guide the user through 
 3. **Confirm destructive actions first.** Before `pr merge`, `pr decline`,
    `branch delete`, `repo delete`, `repo edit --visibility`, or
    `pipeline stop`, show the user the exact target (repository, number,
-   branch) and wait for approval. Add `--yes` only after the user explicitly
-   agreed.
+   branch) and wait for approval. Only three commands have a `--yes` flag:
+   `pr merge`, `repo delete`, and `branch delete`. Non-interactively,
+   `repo delete` and `branch delete` *require* `--yes`, while `pr merge`
+   simply skips its prompt. `pr decline`, `pipeline stop`, and
+   `repo edit --visibility` have no `--yes` — run them without it once the
+   user has approved (passing `--yes` fails with `unknown flag`).
 4. **Never print secrets.** Do not paste the output of `bb auth token`,
    `BB_TOKEN`, or the contents of `hosts.yml` into the conversation. Do not
    use `BB_DEBUG=2` (it logs response bodies, which may contain personal
@@ -55,7 +57,8 @@ bb auth status        # non-zero exit = not logged in -> guide the user through 
    one-line summary) and present them to the user.
 2. Wait for explicit approval in the user's own words. Do not run anything
    before that.
-3. Once approved, run the command with `--yes` and report the result.
+3. Once approved, run the command — adding `--yes` only where the command
+   has it (`pr merge`, `repo delete`, `branch delete`) — and report the result.
 
 Example: deleting a branch
 
@@ -209,5 +212,5 @@ Non-interactive environments (CI): set `BB_EMAIL` and `BB_TOKEN`.
 | `HTTP 403` | missing scope; create a new token with the required scopes (scopes of an existing token cannot be changed) |
 | `no Bitbucket remote found` | pass `-R ws/repo` or run inside a Bitbucket checkout |
 | `HTTP 429` | retries already happened; reduce calls (`-L`, narrower `--json` fields) |
-| `--yes required` | destructive command in a non-interactive run; add `--yes` after the user approved |
+| `--yes required` | `repo delete` / `branch delete` in a non-interactive run; add `--yes` after the user approved |
 | output too long | select fields with `--json` + `--jq`, cap with `-L` |
