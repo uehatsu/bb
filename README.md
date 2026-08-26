@@ -199,11 +199,14 @@ Bitbucket-specific caveats listed above.
 | [GitHub Copilot](https://docs.github.com/copilot) | `skills/copilot/bitbucket/SKILL.md` | `~/.copilot/skills/bitbucket/` | automatically, based on the skill description |
 
 ```sh
-make install-skill              # all three
+make install-skill              # all three (creates ~/.codex and ~/.copilot even if unused)
 make install-claude-code-skill  # Claude Code only
 make install-codex-skill        # Codex only
 make install-copilot-skill      # GitHub Copilot only
 ```
+
+If an installed `SKILL.md` was edited locally, the installer keeps one backup
+as `SKILL.md.bak` (a later install overwrites that backup).
 
 To scope a skill to one project instead, copy the file into that project's
 `.claude/skills/bitbucket/` (Claude Code) or `.github/skills/bitbucket/`
@@ -222,7 +225,11 @@ make build      # bin/bb
 make test       # unit tests (httptest based; real git is used when installed)
 make lint       # requires golangci-lint
 make docs       # regenerate docs/reference (checked in; CI fails if stale)
+make skills     # regenerate skills/*/bitbucket/SKILL.md (checked in; CI fails if stale)
 ```
+
+Before tagging a release, move the `Unreleased` section of `CHANGELOG.md` to
+the new version; the release workflow refuses tags without a matching entry.
 
 Integration tests against the real API run only with `BB_INTEGRATION=1`
 (plus `BB_EMAIL`/`BB_TOKEN`, `BB_INTEGRATION_REPO=WORKSPACE/REPO`). Write

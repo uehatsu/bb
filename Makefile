@@ -38,14 +38,21 @@ check-skills:
 # is available in every project. Use the specific targets to install one of them.
 install-skill: install-claude-code-skill install-codex-skill install-copilot-skill
 
+# install_skill <source> <dest dir>: keeps one .bak of a locally edited copy.
+define install_skill
+	mkdir -p "$(2)"
+	@if [ -f "$(2)/SKILL.md" ] && ! cmp -s "$(1)" "$(2)/SKILL.md"; then \
+		cp "$(2)/SKILL.md" "$(2)/SKILL.md.bak"; \
+		echo "note: existing $(2)/SKILL.md differed; previous copy saved as SKILL.md.bak"; \
+	fi
+	cp "$(1)" "$(2)/SKILL.md"
+endef
+
 install-claude-code-skill:
-	mkdir -p $(HOME)/.claude/skills/bitbucket
-	cp skills/claude_code/bitbucket/SKILL.md $(HOME)/.claude/skills/bitbucket/SKILL.md
+	$(call install_skill,skills/claude_code/bitbucket/SKILL.md,$(HOME)/.claude/skills/bitbucket)
 
 install-codex-skill:
-	mkdir -p $(HOME)/.codex/skills/bitbucket
-	cp skills/codex/bitbucket/SKILL.md $(HOME)/.codex/skills/bitbucket/SKILL.md
+	$(call install_skill,skills/codex/bitbucket/SKILL.md,$(HOME)/.codex/skills/bitbucket)
 
 install-copilot-skill:
-	mkdir -p $(HOME)/.copilot/skills/bitbucket
-	cp skills/copilot/bitbucket/SKILL.md $(HOME)/.copilot/skills/bitbucket/SKILL.md
+	$(call install_skill,skills/copilot/bitbucket/SKILL.md,$(HOME)/.copilot/skills/bitbucket)

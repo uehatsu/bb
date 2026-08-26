@@ -194,11 +194,14 @@ Bitbucket リモート）のリポジトリを対象にします。`-R WORKSPACE
 | [GitHub Copilot](https://docs.github.com/copilot) | `skills/copilot/bitbucket/SKILL.md` | `~/.copilot/skills/bitbucket/` | スキルの説明文に基づいて自動的に |
 
 ```sh
-make install-skill              # 3 つすべて
+make install-skill              # 3 つすべて（使っていないエージェントの ~/.codex や ~/.copilot も作成されます）
 make install-claude-code-skill  # Claude Code のみ
 make install-codex-skill        # Codex のみ
 make install-copilot-skill      # GitHub Copilot のみ
 ```
+
+インストール済みの `SKILL.md` をローカルで編集していた場合は、`SKILL.md.bak` に 1 世代だけ
+退避してから上書きします（次回のインストールでその退避は上書きされます）。
 
 プロジェクト限定にしたい場合は、そのプロジェクトの `.claude/skills/bitbucket/`（Claude Code）
 または `.github/skills/bitbucket/`（Copilot）にコピーしてください。
@@ -215,7 +218,11 @@ make build      # bin/bb
 make test       # ユニットテスト（httptest ベース。git があれば実 git も使用）
 make lint       # golangci-lint が必要
 make docs       # docs/reference を再生成（コミット対象。古いままだと CI が失敗）
+make skills     # skills/*/bitbucket/SKILL.md を再生成（コミット対象。古いままだと CI が失敗）
 ```
+
+リリースのタグを打つ前に `CHANGELOG.md` の `Unreleased` を新バージョンの節に移してください。
+対応する節が無いタグは release ワークフローが拒否します。
 
 実 API に対する統合テストは `BB_INTEGRATION=1` を指定したときのみ実行されます
 （`BB_EMAIL` / `BB_TOKEN`、`BB_INTEGRATION_REPO=WORKSPACE/REPO` が必要）。
