@@ -18,7 +18,8 @@ import (
 func NewCmdBranch(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "branch <command>",
-		Args:  cobra.NoArgs, // unknown subcommands must fail, not print help with exit 0
+		Args:  cobra.ArbitraryArgs,
+		RunE:  cmdutil.GroupRunE, // unknown subcommands must fail, not print help with exit 0
 		Short: "Manage branches on Bitbucket",
 		Example: `  $ bb branch list
   $ bb branch create feat/x --from main

@@ -17,7 +17,8 @@ import (
 func NewCmdRepo(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "repo <command>",
-		Args:  cobra.NoArgs, // unknown subcommands must fail, not print help with exit 0
+		Args:  cobra.ArbitraryArgs,
+		RunE:  cmdutil.GroupRunE, // unknown subcommands must fail, not print help with exit 0
 		Short: "Manage repositories",
 		Long:  "Work with Bitbucket repositories.",
 		Example: `  $ bb repo list acme

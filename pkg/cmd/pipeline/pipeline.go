@@ -25,7 +25,8 @@ import (
 func NewCmdPipeline(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "pipeline <command>",
-		Args:    cobra.NoArgs, // unknown subcommands must fail, not print help with exit 0
+		Args:    cobra.ArbitraryArgs,
+		RunE:    cmdutil.GroupRunE, // unknown subcommands must fail, not print help with exit 0
 		Aliases: []string{"run", "pipelines"},
 		Short:   "Run and monitor Bitbucket Pipelines",
 		Example: `  $ bb pipeline list

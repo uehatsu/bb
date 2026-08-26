@@ -18,7 +18,8 @@ import (
 func NewCmdProject(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "project <command>",
-		Args:  cobra.NoArgs, // unknown subcommands must fail, not print help with exit 0
+		Args:  cobra.ArbitraryArgs,
+		RunE:  cmdutil.GroupRunE, // unknown subcommands must fail, not print help with exit 0
 		Short: "Manage projects in a workspace",
 		Long:  "Bitbucket groups repositories into projects. Every repository belongs to exactly one project.",
 	}

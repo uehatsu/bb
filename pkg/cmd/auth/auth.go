@@ -11,7 +11,8 @@ import (
 func NewCmdAuth(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth <command>",
-		Args:  cobra.NoArgs, // unknown subcommands must fail, not print help with exit 0
+		Args:  cobra.ArbitraryArgs,
+		RunE:  cmdutil.GroupRunE, // unknown subcommands must fail, not print help with exit 0
 		Short: "Authenticate bb with Bitbucket Cloud",
 		Long: `Manage authentication state for Bitbucket Cloud.
 
