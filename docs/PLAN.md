@@ -220,3 +220,6 @@ bb/
 
 ### 実 API 検証結果（2026-08-25、読み取り系）
 `BB_INTEGRATION=1` で統合テストを実行: `/user`・`/user/workspaces`・リポジトリ取得・PR 一覧 PASS。`/workspaces/{ws}/members?q=user.nickname="…"` は**サポートあり**（A5 の高速経路が有効）。`/user/permissions/repositories` は非 2xx（CHANGE-2770 の前提どおり）。書き込み系（部分 PUT、`pipeline_commit_target`）は `BB_INTEGRATION_WRITE=1` での実行待ち。
+
+### v0.1.2（2026-08-26）
+`bb pipeline view/watch/log/stop <build_number>` が常に最古の pipeline (#1) を返すバグを修正。原因: pipelines 一覧 API が `q=build_number=N` を無視する（実 API で確認）。対応: `sort=-created_on` の降順一覧から該当番号を探索（連番性を利用してページを推定、ギャップ時は降順走査で早期打ち切り）。`q` を無視するモックサーバーで回帰テストを追加。

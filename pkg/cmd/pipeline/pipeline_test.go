@@ -45,8 +45,8 @@ func TestListAndResolve(t *testing.T) {
 	if err := v.Execute(); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(got.URL.Query().Get("q"), "build_number=128") {
-		t.Errorf("resolve by number query: %s", got.URL.RawQuery)
+	if q := got.URL.Query(); q.Get("sort") != "-created_on" || q.Get("q") != "" {
+		t.Errorf("resolve by number must scan newest-first without q= (ignored by the API): %s", got.URL.RawQuery)
 	}
 	if !strings.Contains(h.Out.String(), "Pipeline #128 SUCCESSFUL") || !strings.Contains(h.Out.String(), "Build\tSUCCESSFUL\t42s") {
 		t.Errorf("view: %s", h.Out.String())

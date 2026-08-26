@@ -70,18 +70,77 @@ func resolvePipeline(ctx context.Context, c *api.Client, repo cmdutil.Repo, sele
 	if err != nil || n <= 0 {
 		return nil, fmt.Errorf("invalid pipeline %q: expected a build number or UUID", selector)
 	}
-	var found *bitbucket.Pipeline
-	err = api.Paginate(ctx, c, basePath(repo), api.ListOptions{Limit: 1, Query: fmt.Sprintf("build_number=%d", n), Fields: pipelineFields}, func(p bitbucket.Pipeline) error {
-		found = &p
-		return api.ErrStop
-	})
+	return findByBuildNumber(ctx, c, repo, n)
+}
+
+// buildPageLen is the page size used when looking up a build number.
+const buildPageLen = 100
+
+// findByBuildNumber locates a pipeline by build number. The pipelines list
+// endpoint ignores q= filters (it silently returns the oldest pipelines), so
+// the number is resolved from the newest-first listing instead. Build numbers
+// are sequential, which lets us jump straight to the page that should hold
+// the target; a linear newest-first scan is the fallback for gaps.
+func findByBuildNumber(ctx context.Context, c *api.Client, repo cmdutil.Repo, n int) (*bitbucket.Pipeline, error) {
+	notFound := fmt.Errorf("pipeline #%d not found in %s", n, repo.FullName())
+	fetchPage := func(page int) ([]bitbucket.Pipeline, string, error) {
+		var pg api.Page[bitbucket.Pipeline]
+		q := map[string][]string{
+			"sort":    {"-created_on"},
+			"pagelen": {strconv.Itoa(buildPageLen)},
+			"fields":  {pipelineFields},
+			"page":    {strconv.Itoa(page)},
+		}
+		if _, err := c.Do(ctx, api.Request{Path: basePath(repo), Query: q}, &pg); err != nil {
+			return nil, "", err
+		}
+		return pg.Values, pg.Next, nil
+	}
+	find := func(items []bitbucket.Pipeline) *bitbucket.Pipeline {
+		for i := range items {
+			if items[i].BuildNumber == n {
+				return &items[i]
+			}
+		}
+		return nil
+	}
+
+	first, next, err := fetchPage(1)
 	if err != nil {
 		return nil, err
 	}
-	if found == nil {
-		return nil, fmt.Errorf("pipeline #%d not found in %s", n, repo.FullName())
+	if len(first) == 0 || first[0].BuildNumber < n {
+		return nil, notFound
 	}
-	return found, nil
+	if p := find(first); p != nil {
+		return p, nil
+	}
+	// Jump to the page the sequential numbering predicts.
+	latest := first[0].BuildNumber
+	if est := (latest-n)/buildPageLen + 1; est > 1 {
+		items, _, err := fetchPage(est)
+		if err != nil {
+			return nil, err
+		}
+		if p := find(items); p != nil {
+			return p, nil
+		}
+	}
+	// Fallback: walk newest-first until the numbers drop below n.
+	for page := 2; next != ""; page++ {
+		items, nxt, err := fetchPage(page)
+		if err != nil {
+			return nil, err
+		}
+		if p := find(items); p != nil {
+			return p, nil
+		}
+		if len(items) == 0 || items[len(items)-1].BuildNumber < n {
+			break
+		}
+		next = nxt
+	}
+	return nil, notFound
 }
 
 func statusText(p *bitbucket.Pipeline) string {
