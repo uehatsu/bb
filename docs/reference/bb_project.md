@@ -6,6 +6,10 @@ Manage projects in a workspace
 
 Bitbucket groups repositories into projects. Every repository belongs to exactly one project.
 
+```
+bb project <command> [flags]
+```
+
 ### Options
 
 ```

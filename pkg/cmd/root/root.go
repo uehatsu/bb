@@ -32,6 +32,10 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       build.Version,
+		// Same behaviour as the command groups: no args prints help, an
+		// unknown subcommand fails with a usage error (exit 1).
+		Args: cobra.ArbitraryArgs,
+		RunE: cmdutil.GroupRunE,
 	}
 	cmd.SetVersionTemplate(versionCmd.Format(build.Version, build.Date))
 	cmd.PersistentFlags().Bool("help", false, "Show help for command")

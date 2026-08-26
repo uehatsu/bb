@@ -21,6 +21,10 @@ Keys:
   oauth_client_id   OAuth consumer key for 'bb auth login --web'
   oauth_port        loopback port for the OAuth callback (default 8976)
 
+```
+bb config <command> [flags]
+```
+
 ### Options inherited from parent commands
 
 ```

@@ -9,6 +9,10 @@ Manage authentication state for Bitbucket Cloud.
 bb uses Atlassian API tokens (with scopes). App passwords were removed by
 Atlassian in July 2026 and are not supported.
 
+```
+bb auth <command> [flags]
+```
+
 ### Options inherited from parent commands
 
 ```

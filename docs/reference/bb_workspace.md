@@ -2,6 +2,10 @@
 
 Manage workspaces
 
+```
+bb workspace <command> [flags]
+```
+
 ### Options inherited from parent commands
 
 ```

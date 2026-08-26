@@ -61,6 +61,14 @@ func TestExecute(t *testing.T) {
 		t.Errorf("unknown: code=%d err=%q", code, errOut.String())
 	}
 	errOut.Reset()
+	if code := execute(context.Background(), f, []string{"pr", "bogus"}); code != cmdutil.ExitError || !strings.Contains(errOut.String(), "unknown command") {
+		t.Errorf("group unknown: code=%d err=%q", code, errOut.String())
+	}
+	out.Reset()
+	if code := execute(context.Background(), f, []string{"pr"}); code != 0 || !strings.Contains(out.String(), "Available Commands") {
+		t.Errorf("group help: code=%d out=%q", code, out.String())
+	}
+	errOut.Reset()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if code := execute(ctx, f, []string{"no-such-command"}); code != cmdutil.ExitCancel || !strings.Contains(errOut.String(), "interrupted") {

@@ -6,6 +6,10 @@ Manage pull requests
 
 Work with Bitbucket pull requests.
 
+```
+bb pr <command> [flags]
+```
+
 ### Examples
 
 ```

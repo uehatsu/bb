@@ -6,6 +6,10 @@ Manage repositories
 
 Work with Bitbucket repositories.
 
+```
+bb repo <command> [flags]
+```
+
 ### Examples
 
 ```

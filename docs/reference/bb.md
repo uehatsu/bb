@@ -6,6 +6,10 @@ Bitbucket Cloud CLI
 
 Work seamlessly with Bitbucket Cloud from the command line.
 
+```
+bb <command> <subcommand> [flags]
+```
+
 ### Examples
 
 ```

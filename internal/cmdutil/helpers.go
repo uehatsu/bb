@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -46,7 +47,11 @@ func MainBranch(ctx context.Context, client *api.Client, repo Repo) (string, err
 // instead of cobra's default of printing help and exiting 0.
 func GroupRunE(cmd *cobra.Command, args []string) error {
 	if len(args) > 0 {
-		return FlagErrorf("unknown command %q for %q", args[0], cmd.CommandPath())
+		msg := fmt.Sprintf("unknown command %q for %q", args[0], cmd.CommandPath())
+		if suggestions := cmd.SuggestionsFor(args[0]); len(suggestions) > 0 {
+			msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
+		}
+		return FlagErrorf("%s", msg)
 	}
 	return cmd.Help()
 }

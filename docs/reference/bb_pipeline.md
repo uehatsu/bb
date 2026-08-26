@@ -2,6 +2,10 @@
 
 Run and monitor Bitbucket Pipelines
 
+```
+bb pipeline <command> [flags]
+```
+
 ### Examples
 
 ```

@@ -2,6 +2,10 @@
 
 Manage branches on Bitbucket
 
+```
+bb branch <command> [flags]
+```
+
 ### Examples
 
 ```
