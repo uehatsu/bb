@@ -185,18 +185,26 @@ Commands operate on the repository of the current directory's git remote
 - OAuth login needs your own OAuth consumer (Bitbucket has no device flow and
   no public-client/PKCE support); API tokens are the zero-setup path.
 
-## Claude Code skill
+## Agent skills
 
-`skills/bitbucket/SKILL.md` teaches [Claude Code](https://claude.com/claude-code)
-how to drive `bb` safely (JSON output, non-interactive flags, confirmation
-before destructive actions, Bitbucket-specific caveats). Install it once and
-`/bitbucket` becomes available in every project:
+`skills/claude_code/bitbucket/SKILL.md` teaches
+[Claude Code](https://claude.com/claude-code) how to drive `bb` safely
+(JSON output, non-interactive flags, confirmation before destructive actions,
+Bitbucket-specific caveats). Install it once and `/bitbucket` becomes available
+in every project:
 
 ```sh
 make install-skill        # copies it to ~/.claude/skills/bitbucket/SKILL.md
 ```
 
 or copy the file into `.claude/skills/bitbucket/` of a project to scope it there.
+
+`skills/codex/bitbucket/SKILL.md` provides the same guidance in Codex skill
+format:
+
+```sh
+make install-codex-skill  # copies it to ~/.codex/skills/bitbucket/SKILL.md
+```
 
 ## Development
 
