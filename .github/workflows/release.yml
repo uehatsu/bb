@@ -18,6 +18,10 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go test ./...
+      - name: Require a CHANGELOG entry for this tag
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          grep -q "^## \[$v\]" CHANGELOG.md || { echo "CHANGELOG.md has no section for $v"; exit 1; }
       - uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
