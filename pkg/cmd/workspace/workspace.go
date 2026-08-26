@@ -17,6 +17,7 @@ import (
 func NewCmdWorkspace(f *cmdutil.Factory) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "workspace <command>",
+		Args:    cobra.NoArgs, // unknown subcommands must fail, not print help with exit 0
 		Aliases: []string{"ws", "org"},
 		Short:   "Manage workspaces",
 	}

@@ -33,3 +33,14 @@ func TestVersionCommand(t *testing.T) {
 		t.Errorf("unexpected: %q", out.String())
 	}
 }
+
+func TestUnknownSubcommandFails(t *testing.T) {
+	for _, args := range [][]string{{"pipeline", "nonsense"}, {"pr", "nonsense"}, {"repo", "nonsense"}, {"auth", "nonsense"}, {"branch", "x"}, {"workspace", "x"}, {"project", "x"}, {"config", "x"}} {
+		io, _, _, _ := iostreams.Test()
+		cmd := NewCmdRoot(&cmdutil.Factory{IOStreams: io})
+		cmd.SetArgs(args)
+		if err := cmd.Execute(); err == nil || !strings.Contains(err.Error(), "unknown command") {
+			t.Errorf("%v: expected unknown command error, got %v", args, err)
+		}
+	}
+}
