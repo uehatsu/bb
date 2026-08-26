@@ -25,7 +25,7 @@ $ bb pipeline watch 128
 # Homebrew (macOS / Linux)
 brew install uehatsu/tap/bb
 
-# From source (Go 1.22+)
+# From source (Go 1.26+)
 go install github.com/uehatsu/bb/cmd/bb@latest
 ```
 
@@ -187,26 +187,28 @@ Commands operate on the repository of the current directory's git remote
 
 ## Agent skills
 
-`skills/claude_code/bitbucket/SKILL.md` teaches
-[Claude Code](https://claude.com/claude-code) how to drive `bb` safely
-(JSON output, non-interactive flags, confirmation before destructive actions,
-Bitbucket-specific caveats). Install it once and `/bitbucket` becomes available
-in every project:
+The `skills/` directory ships an English `SKILL.md` for three coding agents
+that teaches them how to drive `bb` safely: JSON output, non-interactive
+flags, explicit confirmation before destructive actions, and the
+Bitbucket-specific caveats listed above.
 
-`skills/codex/bitbucket/SKILL.md` and `skills/copilot/bitbucket/SKILL.md`
-provide the same guidance for Codex and GitHub Copilot. Install all, or one:
+| Agent | Skill file | Installed to | How it is used |
+|---|---|---|---|
+| [Claude Code](https://claude.com/claude-code) | `skills/claude_code/bitbucket/SKILL.md` | `~/.claude/skills/bitbucket/` | `/bitbucket`, or automatically when Bitbucket comes up |
+| [Codex](https://openai.com/codex/) | `skills/codex/bitbucket/SKILL.md` | `~/.codex/skills/bitbucket/` | automatically, based on the skill description |
+| [GitHub Copilot](https://docs.github.com/copilot) | `skills/copilot/bitbucket/SKILL.md` | `~/.copilot/skills/bitbucket/` | automatically, based on the skill description |
 
 ```sh
-make install-skill              # all: ~/.claude/skills/, ~/.codex/skills/, ~/.copilot/skills/
+make install-skill              # all three
 make install-claude-code-skill  # Claude Code only
 make install-codex-skill        # Codex only
 make install-copilot-skill      # GitHub Copilot only
 ```
 
-To scope a skill to one project, copy the file into that project's
+To scope a skill to one project instead, copy the file into that project's
 `.claude/skills/bitbucket/` (Claude Code) or `.github/skills/bitbucket/`
-(Copilot) instead. Keep the three SKILL.md files in sync when commands change;
-they differ only in front matter and wording about the host agent.
+(Copilot). The three files share one body and differ only in front matter and
+the agent's name; update all of them together when commands change.
 
 ## Development
 

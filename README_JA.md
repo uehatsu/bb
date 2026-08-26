@@ -25,7 +25,7 @@ $ bb pipeline watch 128
 # Homebrew（macOS / Linux）
 brew install uehatsu/tap/bb
 
-# ソースから（Go 1.22 以上）
+# ソースから（Go 1.26 以上）
 go install github.com/uehatsu/bb/cmd/bb@latest
 ```
 
@@ -182,25 +182,27 @@ Bitbucket リモート）のリポジトリを対象にします。`-R WORKSPACE
 
 ## エージェント用スキル
 
-`skills/claude_code/bitbucket/SKILL.md` は
-[Claude Code](https://claude.com/claude-code) に `bb` の安全な使い方（JSON 出力、
-非対話フラグ、破壊的操作前の確認、Bitbucket 固有の注意）を教えるスキルです。
-一度インストールすると、どのプロジェクトからでも `/bitbucket` で呼び出せます。
+`skills/` ディレクトリには、3 種類のコーディングエージェントに `bb` の安全な使い方
+（JSON 出力、非対話フラグ、破壊的操作前の明示的な確認、上記の Bitbucket 固有の注意）
+を教える英語の `SKILL.md` が入っています。エージェントが読む指示書のため本文は英語ですが、
+ユーザーとのやり取りは日本語で行えます。
 
-`skills/codex/bitbucket/SKILL.md` と `skills/copilot/bitbucket/SKILL.md` は
-同じ内容を Codex / GitHub Copilot の skill 形式に合わせたものです。
-すべて、または必要なものだけをインストールできます。
+| エージェント | スキルファイル | インストール先 | 使われ方 |
+|---|---|---|---|
+| [Claude Code](https://claude.com/claude-code) | `skills/claude_code/bitbucket/SKILL.md` | `~/.claude/skills/bitbucket/` | `/bitbucket`、または Bitbucket の話題で自動的に |
+| [Codex](https://openai.com/codex/) | `skills/codex/bitbucket/SKILL.md` | `~/.codex/skills/bitbucket/` | スキルの説明文に基づいて自動的に |
+| [GitHub Copilot](https://docs.github.com/copilot) | `skills/copilot/bitbucket/SKILL.md` | `~/.copilot/skills/bitbucket/` | スキルの説明文に基づいて自動的に |
 
 ```sh
-make install-skill              # すべて: ~/.claude/skills/, ~/.codex/skills/, ~/.copilot/skills/
+make install-skill              # 3 つすべて
 make install-claude-code-skill  # Claude Code のみ
 make install-codex-skill        # Codex のみ
 make install-copilot-skill      # GitHub Copilot のみ
 ```
 
 プロジェクト限定にしたい場合は、そのプロジェクトの `.claude/skills/bitbucket/`（Claude Code）
-または `.github/skills/bitbucket/`（Copilot）にコピーしてください。コマンドを追加・変更したときは
-3 つの SKILL.md を同時に更新してください（差分は front matter とエージェント名の表現のみです）。
+または `.github/skills/bitbucket/`（Copilot）にコピーしてください。3 つのファイルは本文が共通で、
+差分は front matter とエージェント名だけです。コマンドを追加・変更したときは 3 つとも更新してください。
 
 ## 開発
 
