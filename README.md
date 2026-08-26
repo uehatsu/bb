@@ -193,19 +193,20 @@ Commands operate on the repository of the current directory's git remote
 Bitbucket-specific caveats). Install it once and `/bitbucket` becomes available
 in every project:
 
-`skills/codex/bitbucket/SKILL.md` provides the same guidance in Codex skill
-format. Install both, or one of them:
+`skills/codex/bitbucket/SKILL.md` and `skills/copilot/bitbucket/SKILL.md`
+provide the same guidance for Codex and GitHub Copilot. Install all, or one:
 
 ```sh
-make install-skill              # both: ~/.claude/skills/bitbucket/ and ~/.codex/skills/bitbucket/
+make install-skill              # all: ~/.claude/skills/, ~/.codex/skills/, ~/.copilot/skills/
 make install-claude-code-skill  # Claude Code only
 make install-codex-skill        # Codex only
+make install-copilot-skill      # GitHub Copilot only
 ```
 
-To scope the Claude Code skill to one project, copy the file into that
-project's `.claude/skills/bitbucket/` instead. Keep the two SKILL.md files in
-sync when commands change; they differ only in front matter and wording about
-the host agent.
+To scope a skill to one project, copy the file into that project's
+`.claude/skills/bitbucket/` (Claude Code) or `.github/skills/bitbucket/`
+(Copilot) instead. Keep the three SKILL.md files in sync when commands change;
+they differ only in front matter and wording about the host agent.
 
 ## Development
 

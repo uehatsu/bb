@@ -187,18 +187,20 @@ Bitbucket リモート）のリポジトリを対象にします。`-R WORKSPACE
 非対話フラグ、破壊的操作前の確認、Bitbucket 固有の注意）を教えるスキルです。
 一度インストールすると、どのプロジェクトからでも `/bitbucket` で呼び出せます。
 
-`skills/codex/bitbucket/SKILL.md` は同じ内容を Codex の skill 形式に合わせたものです。
-両方、または片方だけをインストールできます。
+`skills/codex/bitbucket/SKILL.md` と `skills/copilot/bitbucket/SKILL.md` は
+同じ内容を Codex / GitHub Copilot の skill 形式に合わせたものです。
+すべて、または必要なものだけをインストールできます。
 
 ```sh
-make install-skill              # 両方: ~/.claude/skills/bitbucket/ と ~/.codex/skills/bitbucket/
+make install-skill              # すべて: ~/.claude/skills/, ~/.codex/skills/, ~/.copilot/skills/
 make install-claude-code-skill  # Claude Code のみ
 make install-codex-skill        # Codex のみ
+make install-copilot-skill      # GitHub Copilot のみ
 ```
 
-Claude Code のスキルをプロジェクト限定にしたい場合は、そのプロジェクトの
-`.claude/skills/bitbucket/` にコピーしてください。コマンドを追加・変更したときは
-2 つの SKILL.md を同時に更新してください（差分は front matter とエージェント名の表現のみです）。
+プロジェクト限定にしたい場合は、そのプロジェクトの `.claude/skills/bitbucket/`（Claude Code）
+または `.github/skills/bitbucket/`（Copilot）にコピーしてください。コマンドを追加・変更したときは
+3 つの SKILL.md を同時に更新してください（差分は front matter とエージェント名の表現のみです）。
 
 ## 開発
 

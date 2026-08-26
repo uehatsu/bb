@@ -2,7 +2,7 @@ BIN     := bin/bb
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/uehatsu/bb/internal/build.Version=$(VERSION)
 
-.PHONY: build test lint vet fmt clean docs install-skill install-claude-code-skill install-codex-skill
+.PHONY: build test lint vet fmt clean docs install-skill install-claude-code-skill install-codex-skill install-copilot-skill
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/bb
@@ -25,9 +25,9 @@ clean:
 docs:
 	go run ./cmd/gendocs docs/reference
 
-# Install the agent skills (Claude Code and Codex) so `/bitbucket` is available
-# in every project. Use the specific targets to install only one of them.
-install-skill: install-claude-code-skill install-codex-skill
+# Install the agent skills (Claude Code, Codex, GitHub Copilot) so `/bitbucket`
+# is available in every project. Use the specific targets to install one of them.
+install-skill: install-claude-code-skill install-codex-skill install-copilot-skill
 
 install-claude-code-skill:
 	mkdir -p $(HOME)/.claude/skills/bitbucket
@@ -36,3 +36,7 @@ install-claude-code-skill:
 install-codex-skill:
 	mkdir -p $(HOME)/.codex/skills/bitbucket
 	cp skills/codex/bitbucket/SKILL.md $(HOME)/.codex/skills/bitbucket/SKILL.md
+
+install-copilot-skill:
+	mkdir -p $(HOME)/.copilot/skills/bitbucket
+	cp skills/copilot/bitbucket/SKILL.md $(HOME)/.copilot/skills/bitbucket/SKILL.md
