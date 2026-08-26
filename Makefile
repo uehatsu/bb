@@ -25,8 +25,9 @@ clean:
 docs:
 	go run ./cmd/gendocs docs/reference
 
-# Install the Claude Code skill so `/bitbucket` is available in every project.
-install-skill: install-claude-code-skill
+# Install the agent skills (Claude Code and Codex) so `/bitbucket` is available
+# in every project. Use the specific targets to install only one of them.
+install-skill: install-claude-code-skill install-codex-skill
 
 install-claude-code-skill:
 	mkdir -p $(HOME)/.claude/skills/bitbucket

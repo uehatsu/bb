@@ -16,8 +16,8 @@ metadata:
 Bitbucket 操作を始める前に、必要な範囲で状態を確認する。
 
 ```sh
-bb version
-bb auth status
+bb version            # 未導入なら: brew install uehatsu/tap/bb（または go install github.com/uehatsu/bb/cmd/bb@latest）
+bb auth status        # exit 0 以外なら未ログイン → ユーザーに `bb auth login` を案内（§5）
 ```
 
 - `bb` が無い、または未ログインの場合は、curl や独自実装で API を叩かず、導入または `bb auth login` をユーザーに案内する。
@@ -37,13 +37,13 @@ bb auth status
 ### リポジトリ
 
 ```sh
-bb repo list <workspace> --json fullName,description,updatedAt
+bb repo list <workspace> --json fullName,description,updatedAt   # -L で件数、--role contributor|admin|owner
 bb repo view [ws/repo] --json fullName,mainBranch,url,isPrivate
 bb repo clone ws/repo [dir] [-- --depth 1]
 bb repo create ws/name --private --project KEY -d "説明"
 bb repo fork ws/repo --workspace mine --clone
 bb repo edit --default-branch main --description "..."
-bb repo delete ws/repo --yes
+bb repo delete ws/repo --yes          # 要ユーザー承認
 ```
 
 ### プルリクエスト
@@ -51,19 +51,19 @@ bb repo delete ws/repo --yes
 ```sh
 bb pr list --state open|merged|declined|all --author @me --base main -L 20 --json id,title,state,headRefName,author,url
 bb pr view 42 --json id,title,body,state,headRefName,baseRefName,reviewers,participants,url
-bb pr view 42 --comments
-bb pr diff 42 [--stat | --name-only]
-bb pr checks 42
+bb pr view 42 --comments                         # レビューコメントを含めて表示
+bb pr diff 42 [--stat | --name-only] --color never   # ANSI なしで読む
+bb pr checks 42                                   # exit 8 = 実行中、1 = 失敗あり
 bb pr create --title "..." --body "..." [--base develop] [--head feat/x] [--reviewer alice,bob] [--draft] [--close-source-branch]
-bb pr create --fill
-bb pr checkout 42
+bb pr create --fill                               # コミットからタイトル/本文を生成
+bb pr checkout 42                                 # ブランチを取得してチェックアウト（フォークも可）
 bb pr review 42 --approve | --request-changes -b "理由" | --comment -b "..."
 bb pr comment 42 -b "..." [--path src/x.go --line 10]
 bb pr edit 42 --title "..." --body "..." --add-reviewer carol --remove-reviewer bob --base main
-bb pr ready 42 [--undo]
-bb pr merge 42 --squash|--merge|--rebase [--delete-branch] [-b "コミットメッセージ"] --yes
-bb pr decline 42 [--delete-branch]
-bb pr status
+bb pr ready 42 [--undo]                           # draft <-> ready
+bb pr merge 42 --squash|--merge|--rebase [--delete-branch] [-b "コミットメッセージ"] --yes   # 要ユーザー承認
+bb pr decline 42 [--delete-branch]                # 要ユーザー承認（close は alias。reopen は不可）
+bb pr status                                      # 自分の PR / レビュー待ち
 ```
 
 - 複数行の本文は `--body-file -` で stdin から渡す。
@@ -73,11 +73,11 @@ bb pr status
 
 ```sh
 bb pipeline list -L 10 --json buildNumber,status,result,refName,createdAt,url
-bb pipeline view 128
+bb pipeline view 128 [--json buildNumber,status,result,refName]   # ステップ一覧
 bb pipeline run --branch main [--custom deploy --var ENV=prod] [--watch]
-bb pipeline watch 128 [--exit-status=false]
+bb pipeline watch 128 [--exit-status=false]       # 完了まで待機。失敗時 exit 1
 bb pipeline log 128 [--step 2] [--follow]
-bb pipeline stop 128
+bb pipeline stop 128                              # 要ユーザー承認
 ```
 
 ### ブランチ / ワークスペース / プロジェクト
@@ -85,7 +85,7 @@ bb pipeline stop 128
 ```sh
 bb branch list -L 20 --json name,target
 bb branch create feat/x --from main
-bb branch delete feat/x --yes
+bb branch delete feat/x --yes                     # 要ユーザー承認
 bb workspace list --json slug,name
 bb workspace members <ws>
 bb project list -w <ws> --json key,name
