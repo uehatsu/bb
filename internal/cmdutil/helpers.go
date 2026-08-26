@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/uehatsu/bb/internal/api"
 	"github.com/uehatsu/bb/internal/bitbucket"
 	"github.com/uehatsu/bb/internal/prompt"
@@ -37,4 +39,14 @@ func MainBranch(ctx context.Context, client *api.Client, repo Repo) (string, err
 		return "", fmt.Errorf("repository %s has no main branch", repo.FullName())
 	}
 	return r.MainBranch.Name, nil
+}
+
+// GroupRunE is the RunE for command groups (auth, pr, repo, ...): with no
+// arguments it prints help; with an unknown subcommand it fails with exit 1
+// instead of cobra's default of printing help and exiting 0.
+func GroupRunE(cmd *cobra.Command, args []string) error {
+	if len(args) > 0 {
+		return FlagErrorf("unknown command %q for %q", args[0], cmd.CommandPath())
+	}
+	return cmd.Help()
 }
