@@ -20,14 +20,9 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
       - run: go build ./cmd/bb
-      - name: Check generated docs are up to date
+      - name: Check generated docs and agent skills are up to date
         if: runner.os == 'Linux'
-        run: |
-          go run ./cmd/gendocs docs/reference
-          git diff --exit-code -- docs/reference
-      - name: Check generated agent skills are up to date
-        if: runner.os == 'Linux'
-        run: make check-skills
+        run: make check-docs check-skills
 
   lint:
     runs-on: ubuntu-latest

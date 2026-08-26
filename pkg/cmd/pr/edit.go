@@ -36,15 +36,11 @@ func NewCmdEdit(f *cmdutil.Factory) *cobra.Command {
 			}
 			sel := cmdutil.OptionalArg(args)
 			ctx := cmd.Context()
-			repo, err := f.BaseRepo()
-			if err != nil {
-				return err
-			}
 			client, err := f.APIClient()
 			if err != nil {
 				return err
 			}
-			pr, repo, err := resolvePR(ctx, f, client, repo, sel)
+			pr, repo, err := resolvePR(ctx, f, client, sel)
 			if err != nil {
 				return err
 			}

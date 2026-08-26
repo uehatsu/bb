@@ -43,15 +43,22 @@ func MainBranch(ctx context.Context, client *api.Client, repo Repo) (string, err
 }
 
 // GroupRunE is the RunE for command groups (auth, pr, repo, ...): with no
-// arguments it prints help; with an unknown subcommand it fails with exit 1
-// instead of cobra's default of printing help and exiting 0.
+// arguments it prints help; with an unknown subcommand it fails with a usage
+// error (exit 1) instead of cobra's default of printing help and exiting 0.
+// The "Did you mean" hint mirrors cobra's unexported findSuggestions, which
+// is what the root command gets from cobra itself.
 func GroupRunE(cmd *cobra.Command, args []string) error {
-	if len(args) > 0 {
-		msg := fmt.Sprintf("unknown command %q for %q", args[0], cmd.CommandPath())
-		if suggestions := cmd.SuggestionsFor(args[0]); len(suggestions) > 0 {
-			msg += "\n\nDid you mean this?\n\t" + strings.Join(suggestions, "\n\t")
-		}
-		return FlagErrorf("%s", msg)
+	if len(args) == 0 {
+		return cmd.Help()
 	}
-	return cmd.Help()
+	suggest := ""
+	if !cmd.DisableSuggestions && args[0] != "" {
+		if cmd.SuggestionsMinimumDistance <= 0 {
+			cmd.SuggestionsMinimumDistance = 2
+		}
+		if s := cmd.SuggestionsFor(args[0]); len(s) > 0 {
+			suggest = "\n\nDid you mean this?\n\t" + strings.Join(s, "\n\t")
+		}
+	}
+	return FlagErrorf("unknown command %q for %q%s", args[0], cmd.CommandPath(), suggest)
 }

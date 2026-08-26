@@ -2,6 +2,8 @@
 package root
 
 import (
+	"strings"
+
 	"github.com/spf13/cobra"
 
 	"github.com/uehatsu/bb/internal/build"
@@ -32,10 +34,10 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 		SilenceErrors: true,
 		SilenceUsage:  true,
 		Version:       build.Version,
-		// Same behaviour as the command groups: no args prints help, an
-		// unknown subcommand fails with a usage error (exit 1).
-		Args: cobra.ArbitraryArgs,
-		RunE: cmdutil.GroupRunE,
+		// No Args/RunE on purpose: cobra then validates the first argument
+		// before parsing flags (`bb bogus --help` is still an unknown
+		// command) and prints help when there is none; main maps its
+		// "unknown command" error to a usage error, exit 1.
 	}
 	cmd.SetVersionTemplate(versionCmd.Format(build.Version, build.Date))
 	cmd.PersistentFlags().Bool("help", false, "Show help for command")
@@ -55,6 +57,25 @@ func NewCmdRoot(f *cmdutil.Factory) *cobra.Command {
 		versionCmd.NewCmdVersion(f),
 	)
 
-	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	// `bb help [command]` works like gh, but the command is kept out of the
+	// command list. cobra's usage template lists a command named "help" even
+	// when it is hidden, so drop that clause from the template (a no-op if
+	// cobra ever rewords it).
+	cmd.SetHelpCommand(&cobra.Command{
+		Use:    "help [command]",
+		Short:  "Help about any command",
+		Hidden: true,
+		RunE: func(c *cobra.Command, args []string) error {
+			target, rest, err := c.Root().Find(args)
+			if target == nil || err != nil || len(rest) > 0 {
+				// Like an unknown command: usage error, exit 1 (gh does the same).
+				return cmdutil.FlagErrorf("unknown help topic %q for %q", strings.Join(args, " "), c.Root().CommandPath())
+			}
+			target.InitDefaultHelpFlag()
+			target.InitDefaultVersionFlag()
+			return target.Help()
+		},
+	})
+	cmd.SetUsageTemplate(strings.ReplaceAll(cmd.UsageTemplate(), `(or .IsAvailableCommand (eq .Name "help"))`, `.IsAvailableCommand`))
 	return cmd
 }

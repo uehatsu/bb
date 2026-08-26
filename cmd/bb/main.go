@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -37,6 +38,9 @@ func execute(ctx context.Context, f *cmdutil.Factory, args []string) int {
 	rootCmd.SetErr(f.IOStreams.ErrOut)
 	rootCmd.SetArgs(args)
 	rootCmd.SetContext(ctx)
+	// Unknown / malformed flags are usage errors like unknown commands:
+	// error + usage on stderr, exit 1 (gh parity).
+	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return cmdutil.FlagErrorWrap(err) })
 	cmd, err := rootCmd.ExecuteC()
 	return exitCode(f.IOStreams.ErrOut, cmd, err, ctx.Err() != nil)
 }
@@ -67,12 +71,15 @@ func exitCode(errOut io.Writer, cmd *cobra.Command, err error, interrupted bool)
 		fmt.Fprintln(errOut, authErr.Error())
 		return cmdutil.ExitAuth
 	}
+	// Usage errors: our FlagError, and cobra's report of an unknown root
+	// command (raised before flag parsing, so it is a plain error). Like gh,
+	// print the usage to stderr so stdout stays clean for scripts.
 	var flagErr *cmdutil.FlagError
-	if errors.As(err, &flagErr) {
-		fmt.Fprintln(errOut, err)
+	if errors.As(err, &flagErr) || strings.HasPrefix(err.Error(), "unknown command ") {
+		fmt.Fprintln(errOut, strings.TrimRight(err.Error(), "\n"))
 		fmt.Fprintln(errOut)
 		if cmd != nil {
-			_ = cmd.Usage()
+			fmt.Fprint(errOut, cmd.UsageString())
 		}
 		return cmdutil.ExitError
 	}

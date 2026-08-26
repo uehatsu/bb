@@ -21,13 +21,18 @@ bb auth status        # non-zero exit = not logged in -> guide the user through 
   hand-written API client**. Ask the user to install / log in.
 - The target repository is inferred from the current directory's git remote
   (`upstream` > `origin`). Outside a Bitbucket checkout, **always pass
-  `-R WORKSPACE/REPO`**.
+  `-R WORKSPACE/REPO`** to the commands that act on one repository (`pr`,
+  `pipeline`, `branch`, `api`, `browse`, and `repo view|edit|delete|fork`).
+  `repo list`, `repo create`, `repo clone`, `workspace ...` and `project ...`
+  have no `-R`: they take the workspace or repository as an argument
+  (`project` uses `-w WORKSPACE`).
 
 ## 1. Ground rules
 
 1. **Prefer machine-readable output.** Fetch data with `--json <fields>` and
    `--jq`; never parse the table output. To list the available fields, run
-   `bb <cmd> --json x` with a bogus field name.
+   `bb <cmd> --json x` with a bogus field name (give `repo view` a
+   `WORKSPACE/REPO` argument, otherwise the repository lookup fails first).
 2. **Run non-interactively.** The command runner is not a TTY. Pass explicit
    flags for anything that would prompt: `pr create --title/--body`,
    `pr merge --squash|--merge|--rebase`, `repo delete --yes`,
@@ -47,8 +52,9 @@ bb auth status        # non-zero exit = not logged in -> guide the user through 
    data).
 5. **Pull requests may be given as URLs.**
    `bb pr view https://bitbucket.org/ws/repo/pull-requests/42` targets the
-   repository named in the URL (the current repository is ignored). A bare
-   number targets the current / `-R` repository.
+   repository named in the URL (the current repository and `-R` are ignored,
+   and no checkout is needed). A bare number targets the current / `-R`
+   repository.
 6. **Read exit codes.** 0 success, 1 error, 2 cancelled, 4 authentication
    required, 8 still in progress (`pr checks`). On 4, ask the user to log in.
 
@@ -87,7 +93,7 @@ bb repo delete ws/repo --yes          # needs user approval
 ```sh
 bb pr list --state open|merged|declined|all --author @me --base main -L 20 --json id,title,state,headRefName,author,url
 bb pr view 42 --json id,title,body,state,headRefName,baseRefName,reviewers,participants,url
-bb pr view 42 --comments                         # include review comments
+bb pr view 42 --comments                         # text output only: --comments is ignored together with --json
 bb pr diff 42 [--stat | --name-only] --color never   # plain text, no ANSI
 bb pr checks 42                                   # exit 8 = running, 1 = something failed
 bb pr create --title "..." --body "..." [--base develop] [--head feat/x] [--reviewer alice,bob] [--draft] [--close-source-branch]
@@ -102,7 +108,10 @@ bb pr decline 42 [--delete-branch]                # needs user approval (close i
 bb pr status                                      # your PRs and review requests
 ```
 
-- Pass multi-line bodies via `--body-file -` (stdin / heredoc).
+- `pr create`, `pr edit`, `pr review` and `pr comment` take multi-line bodies
+  via `--body-file -` (stdin / heredoc); `pr merge -b` only takes the message
+  inline.
+- Comments as JSON: `bb api repositories/{workspace}/{repo_slug}/pullrequests/42/comments --paginate --jq '[.[] | select(.deleted | not) | {id, author: .user.display_name, body: .content.raw, inline, created_on}]'`
 - Bitbucket's six merge strategies are available through
   `--strategy merge_commit|squash|fast_forward|squash_fast_forward|rebase_fast_forward|rebase_merge`.
 
@@ -110,7 +119,8 @@ bb pr status                                      # your PRs and review requests
 
 ```sh
 bb pipeline list -L 10 --json buildNumber,status,result,refName,createdAt,url
-bb pipeline view 128 [--json buildNumber,status,result,refName]   # lists the steps
+bb pipeline view 128 [--json buildNumber,status,result,refName,uuid]   # text output lists the numbered steps; --json does NOT include them
+bb api "repositories/{workspace}/{repo_slug}/pipelines/<uuid>/steps" --paginate --jq 'to_entries[] | "\(.key+1)\t\(.value.name)\t\(.value.state.result.name // .value.state.name)"'   # steps as JSON; the number is the value for --step
 bb pipeline run --branch main [--custom deploy --var ENV=prod] [--watch]
 bb pipeline watch 128 [--exit-status=false]       # wait for completion; exit 1 on failure unless --exit-status=false
 bb pipeline log 128 [--step 2] [--follow]
@@ -161,8 +171,9 @@ bb browse [42 | path/to/file[:line]] [--branch x] [--pull-requests | --pipelines
 **Review a pull request**
 
 1. `bb pr view <n> --json title,body,headRefName,baseRefName,author,participants`
-2. `bb pr diff <n>` (use `--stat` / `--name-only` first when the diff is large,
-   or `bb pr checkout <n>` to read files locally).
+2. `bb pr diff <n>` (use `--stat` / `--name-only` first when the diff is large;
+   `bb api 'repositories/{workspace}/{repo_slug}/pullrequests/<n>/diff?path=<file>'`
+   returns one file's diff, or `bb pr checkout <n>` to read files locally).
 3. `bb pr checks <n>`
 4. Post findings with `bb pr comment` / `bb pr review --request-changes -b`
    after showing the user what will be posted.
@@ -170,7 +181,9 @@ bb browse [42 | path/to/file[:line]] [--branch x] [--pull-requests | --pipelines
 **Investigate a CI failure**
 
 1. `bb pr checks <n>` or `bb pipeline list --branch <br> -L 3 --json buildNumber,result,url`
-2. `bb pipeline view <build#>` for the steps and their results.
+2. `bb pipeline view <build#>` prints the numbered steps and their results
+   (text output); for JSON take `uuid` from `--json uuid --jq .uuid` and list
+   `.../pipelines/<uuid>/steps` with `bb api` (cheat sheet).
 3. `bb pipeline log <build#> --step <k>` (pipe through `tail -200` when long).
 
 **Merge**
@@ -196,7 +209,9 @@ bb browse [42 | path/to/file[:line]] [--branch x] [--pull-requests | --pipelines
 ```text
 1. Open https://id.atlassian.com/manage-profile/security/api-tokens
 2. "Create API token with scopes" -> app: Bitbucket -> grant the scopes you need
-   (read/write repository, pullrequest, pipeline; read user, workspace, project) -> set an expiry
+   (required: read/write repository, pullrequest, pipeline; read user, workspace, project;
+   add admin:repository and delete:repository for `repo create/edit/delete`, and admin:project
+   for `project create` -- full table: `bb auth login --help`) -> set an expiry
 3. Run `bb auth login` and enter your Atlassian account e-mail and the token
    (`--expires-in 1y` enables expiry warnings)
 4. Run `bb auth setup-git` to reuse the token for git push/fetch

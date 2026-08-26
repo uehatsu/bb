@@ -35,15 +35,11 @@ added and the branch is fetched from it.`,
 }
 
 func runCheckout(ctx context.Context, f *cmdutil.Factory, selector, localBranch string, force, detach bool) error {
-	repo, err := f.BaseRepo()
-	if err != nil {
-		return err
-	}
 	client, err := f.APIClient()
 	if err != nil {
 		return err
 	}
-	pr, repo, err := resolvePR(ctx, f, client, repo, selector)
+	pr, repo, err := resolvePR(ctx, f, client, selector)
 	if err != nil {
 		return err
 	}

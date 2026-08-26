@@ -60,6 +60,9 @@ func TestExecute(t *testing.T) {
 	if code := execute(context.Background(), f, []string{"no-such-command"}); code != cmdutil.ExitError || !strings.Contains(errOut.String(), "unknown command") {
 		t.Errorf("unknown: code=%d err=%q", code, errOut.String())
 	}
+	if out.Len() != 0 || !strings.Contains(errOut.String(), "Usage:") {
+		t.Errorf("unknown: usage must go to stderr only: out=%q err=%q", out.String(), errOut.String())
+	}
 	errOut.Reset()
 	if code := execute(context.Background(), f, []string{"pr", "bogus"}); code != cmdutil.ExitError || !strings.Contains(errOut.String(), "unknown command") {
 		t.Errorf("group unknown: code=%d err=%q", code, errOut.String())
@@ -73,5 +76,18 @@ func TestExecute(t *testing.T) {
 	cancel()
 	if code := execute(ctx, f, []string{"no-such-command"}); code != cmdutil.ExitCancel || !strings.Contains(errOut.String(), "interrupted") {
 		t.Errorf("cancelled ctx: code=%d err=%q", code, errOut.String())
+	}
+}
+
+func TestUnknownFlagIsUsageError(t *testing.T) {
+	ios, _, out, errOut := iostreams.Test()
+	f := &cmdutil.Factory{IOStreams: ios}
+	for _, args := range [][]string{{"--bogusflag"}, {"pr", "list", "--bogusflag"}, {"pr", "view", "-Z"}} {
+		out.Reset()
+		errOut.Reset()
+		code := execute(context.Background(), f, args)
+		if code != cmdutil.ExitError || !strings.Contains(errOut.String(), "unknown") || !strings.Contains(errOut.String(), "Usage:") || out.Len() != 0 {
+			t.Errorf("%v: code=%d stdout=%q stderr=%q", args, code, out.String(), errOut.String())
+		}
 	}
 }

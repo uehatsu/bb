@@ -41,15 +41,11 @@ Without an argument, the pull request for the current branch is shown.`,
 }
 
 func runView(ctx context.Context, f *cmdutil.Factory, selector string, web, withComments bool, exporter *output.Exporter) error {
-	repo, err := f.BaseRepo()
-	if err != nil {
-		return err
-	}
 	client, err := f.APIClient()
 	if err != nil {
 		return err
 	}
-	pr, repo, err := resolvePRFull(ctx, f, client, repo, selector)
+	pr, repo, err := resolvePRFull(ctx, f, client, selector)
 	if err != nil {
 		return err
 	}

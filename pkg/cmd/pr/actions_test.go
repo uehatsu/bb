@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/spf13/cobra"
+
 	"github.com/uehatsu/bb/internal/cmdutil"
 	"github.com/uehatsu/bb/internal/testutil"
 )
@@ -410,6 +412,46 @@ func TestEditRemoveReviewerWhoLeftWorkspace(t *testing.T) {
 	}
 	if !strings.Contains(putBody, `"reviewers":[{"uuid":"{bob}"}]`) {
 		t.Errorf("put body: %s", putBody)
+	}
+}
+
+func TestPRURLNeedsNoBaseRepo(t *testing.T) {
+	h := testutil.NewHarness(t)
+	// Outside a Bitbucket checkout (and without -R / BB_REPO) the base
+	// repository cannot be resolved; a URL must still work on its own.
+	h.Factory.BaseRepo = func() (cmdutil.Repo, error) {
+		return cmdutil.Repo{}, errors.New("no Bitbucket remote found")
+	}
+	var hit []string
+	h.Handle("/repositories/other/repo/pullrequests/42", func(w http.ResponseWriter, r *http.Request) {
+		hit = append(hit, "get")
+		w.Write([]byte(strings.ReplaceAll(prJSON, `"full_name":"acme/widgets"`, `"full_name":"other/repo"`)))
+	})
+	h.Handle("/repositories/other/repo/pullrequests/42/approve", func(w http.ResponseWriter, r *http.Request) {
+		hit = append(hit, "approve")
+		w.Write([]byte(`{}`))
+	})
+	for _, newCmd := range []func(*cmdutil.Factory) *cobra.Command{NewCmdView, NewCmdApprove} {
+		c := newCmd(h.Factory)
+		c.SetArgs([]string{"https://bitbucket.org/other/repo/pull-requests/42"})
+		if err := c.Execute(); err != nil {
+			t.Errorf("%s with a URL must not need a base repository: %v", c.Name(), err)
+		}
+	}
+	if strings.Join(hit, ",") != "get,get,approve" {
+		t.Errorf("unexpected requests: %v", hit)
+	}
+	// A bare number still needs the base repository; a foreign URL is
+	// rejected as such (not as a missing remote).
+	c := NewCmdView(h.Factory)
+	c.SetArgs([]string{"42"})
+	if err := c.Execute(); err == nil || !strings.Contains(err.Error(), "no Bitbucket remote") {
+		t.Errorf("bare number: expected the base repository error, got %v", err)
+	}
+	c = NewCmdView(h.Factory)
+	c.SetArgs([]string{"https://github.com/other/repo/pull/42"})
+	if err := c.Execute(); err == nil || !strings.Contains(err.Error(), "not a bitbucket.org") {
+		t.Errorf("foreign URL: expected a URL error, got %v", err)
 	}
 }
 

@@ -90,15 +90,11 @@ merge task until it completes (see --timeout).`,
 func runMerge(ctx context.Context, f *cmdutil.Factory, opts *MergeOptions) error {
 	ios := f.IOStreams
 	cs := ios.ColorScheme()
-	repo, err := f.BaseRepo()
-	if err != nil {
-		return err
-	}
 	client, err := f.APIClient()
 	if err != nil {
 		return err
 	}
-	pr, repo, err := resolvePR(ctx, f, client, repo, opts.Selector)
+	pr, repo, err := resolvePR(ctx, f, client, opts.Selector)
 	if err != nil {
 		return err
 	}

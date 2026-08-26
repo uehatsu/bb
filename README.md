@@ -195,7 +195,7 @@ Bitbucket-specific caveats listed above.
 | Agent | Skill file | Installed to | How it is used |
 |---|---|---|---|
 | [Claude Code](https://claude.com/claude-code) | `skills/claude_code/bitbucket/SKILL.md` | `~/.claude/skills/bitbucket/` | `/bitbucket`, or automatically when Bitbucket comes up |
-| [Codex](https://openai.com/codex/) | `skills/codex/bitbucket/SKILL.md` | `~/.codex/skills/bitbucket/` | automatically, based on the skill description |
+| [Codex](https://openai.com/codex/) | `skills/codex/bitbucket/SKILL.md` | `~/.codex/skills/bitbucket/` | `$bitbucket`, or automatically based on the skill description |
 | [GitHub Copilot](https://docs.github.com/copilot) | `skills/copilot/bitbucket/SKILL.md` | `~/.copilot/skills/bitbucket/` | automatically, based on the skill description |
 
 ```sh
@@ -212,11 +212,12 @@ To scope a skill to one project instead, copy the file into that project's
 `.claude/skills/bitbucket/` (Claude Code) or `.github/skills/bitbucket/`
 (Copilot).
 
-The three `SKILL.md` files are **generated**: the shared body lives in
-`skills/bitbucket.body.md` and each agent's front matter in
-`skills/<agent>/bitbucket/frontmatter.md`. Edit those, run `make skills`, and
-commit the result — CI fails (`make check-skills`) when the generated files are
-stale. Note that `check-skills` also fails on uncommitted edits under `skills/`.
+The three `SKILL.md` files are **generated**: the shared description and body
+live in `skills/bitbucket.description.txt` and `skills/bitbucket.body.md`, and
+each agent's front matter in `skills/<agent>/bitbucket/frontmatter.md`
+(`AGENT_NAME` and `SKILL_DESCRIPTION` are substituted). Edit those, run
+`make skills`, and commit the result — CI fails (`make check-skills`) when the
+generated files are stale.
 
 ## Development
 
@@ -226,6 +227,7 @@ make test       # unit tests (httptest based; real git is used when installed)
 make lint       # requires golangci-lint
 make docs       # regenerate docs/reference (checked in; CI fails if stale)
 make skills     # regenerate skills/*/bitbucket/SKILL.md (checked in; CI fails if stale)
+make check-docs check-skills   # compare the generated files without touching them (what CI runs)
 ```
 
 Before tagging a release, move the `Unreleased` section of `CHANGELOG.md` to

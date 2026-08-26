@@ -2,7 +2,7 @@ BIN     := bin/bb
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/uehatsu/bb/internal/build.Version=$(VERSION)
 
-.PHONY: build test lint vet fmt clean docs skills check-skills install-skill install-claude-code-skill install-codex-skill install-copilot-skill
+.PHONY: build test lint vet fmt clean docs check-docs skills check-skills install-skill install-claude-code-skill install-codex-skill install-copilot-skill
 
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/bb
@@ -25,11 +25,19 @@ clean:
 docs:
 	go run ./cmd/gendocs docs/reference
 
-# The three SKILL.md files are generated from skills/bitbucket.body.md plus
-# skills/<agent>/bitbucket/frontmatter.md. Edit those sources, then run
-# `make skills`; CI runs `make check-skills` to reject stale generated files.
+# The three SKILL.md files are generated from skills/bitbucket.description.txt,
+# skills/bitbucket.body.md and skills/<agent>/bitbucket/frontmatter.md. Edit
+# those sources, then run `make skills`.
 skills:
 	scripts/gen-skills.sh
+
+# check-docs / check-skills regenerate into a temporary directory and fail when
+# a checked-in file differs (CI runs both); the working tree is left untouched.
+check-docs:
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	go run ./cmd/gendocs "$$tmp" || { echo "check-docs: generating docs failed (see above)" >&2; exit 1; }; \
+	diff -r "$$tmp" docs/reference \
+		|| { echo "docs/reference is stale; run 'make docs' and commit the result" >&2; exit 1; }
 
 check-skills:
 	scripts/gen-skills.sh --check
@@ -42,7 +50,7 @@ install-skill: install-claude-code-skill install-codex-skill install-copilot-ski
 define install_skill
 	mkdir -p "$(2)"
 	@if [ -f "$(2)/SKILL.md" ] && ! cmp -s "$(1)" "$(2)/SKILL.md"; then \
-		cp "$(2)/SKILL.md" "$(2)/SKILL.md.bak"; \
+		cp "$(2)/SKILL.md" "$(2)/SKILL.md.bak" || exit 1; \
 		echo "note: existing $(2)/SKILL.md differed; previous copy saved as SKILL.md.bak"; \
 	fi
 	cp "$(1)" "$(2)/SKILL.md"

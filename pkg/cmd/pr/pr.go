@@ -110,21 +110,41 @@ func findPRForBranch(ctx context.Context, client *api.Client, repo cmdutil.Repo,
 	return &found[0], nil
 }
 
+// baseRepoFor returns the repository a PR selector refers to. A pull request
+// URL names its repository, so no checkout, -R or BB_REPO is needed (and none
+// of them is consulted); any other selector uses the base repository.
+func baseRepoFor(f *cmdutil.Factory, selector string) (cmdutil.Repo, error) {
+	sel, err := parsePRSelector(strings.TrimSpace(selector))
+	if err != nil {
+		return cmdutil.Repo{}, err
+	}
+	if sel.repo != nil {
+		return *sel.repo, nil
+	}
+	return f.BaseRepo()
+}
+
 // resolvePR resolves a PR from a selector: a number, a branch name, a PR URL,
-// or "" for the current branch. Only the core fields are fetched. The
-// returned repo is the repository the PR belongs to: for URL selectors it is
-// taken from the URL (like gh), otherwise it is the repo passed in.
-func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
-	return resolvePRFields(ctx, f, client, repo, selector, prCoreFields)
+// or "" for the current branch, and returns it together with the repository
+// it belongs to. The repository comes from the URL when one is given (like
+// gh, never aliased onto the current repository); otherwise from --repo,
+// BB_REPO, or the git remotes (see baseRepoFor). Only the core fields are
+// fetched.
+func resolvePR(ctx context.Context, f *cmdutil.Factory, client *api.Client, selector string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
+	return resolvePRFields(ctx, f, client, selector, prCoreFields)
 }
 
 // resolvePRFull resolves a PR with every field (for `pr view`).
-func resolvePRFull(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
-	return resolvePRFields(ctx, f, client, repo, selector, "")
+func resolvePRFull(ctx context.Context, f *cmdutil.Factory, client *api.Client, selector string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
+	return resolvePRFields(ctx, f, client, selector, "")
 }
 
-func resolvePRFields(ctx context.Context, f *cmdutil.Factory, client *api.Client, repo cmdutil.Repo, selector, fields string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
+func resolvePRFields(ctx context.Context, f *cmdutil.Factory, client *api.Client, selector, fields string) (*bitbucket.PullRequest, cmdutil.Repo, error) {
 	selector = strings.TrimSpace(selector)
+	repo, err := baseRepoFor(f, selector)
+	if err != nil {
+		return nil, cmdutil.Repo{}, err
+	}
 	if selector == "" {
 		if f.GitClient == nil {
 			return nil, repo, errors.New("pull request number or branch required")
@@ -140,15 +160,7 @@ func resolvePRFields(ctx context.Context, f *cmdutil.Factory, client *api.Client
 		pr, err := findPRForBranch(ctx, client, repo, branch)
 		return pr, repo, err
 	}
-	sel, err := parsePRSelector(selector)
-	if err != nil {
-		return nil, repo, err
-	}
-	if sel.repo != nil {
-		// A URL identifies the resource fully; never alias it onto the
-		// current repository (that would target the wrong PR).
-		repo = *sel.repo
-	}
+	sel, _ := parsePRSelector(selector) // validated by baseRepoFor
 	if sel.number > 0 {
 		pr, err := fetchPR(ctx, client, repo, sel.number, fields)
 		return pr, repo, err

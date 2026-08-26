@@ -142,15 +142,11 @@ type prFunc func(ctx context.Context, c *api.Client, repo cmdutil.Repo, pr *bitb
 
 // withPR resolves the PR from selector and runs fn.
 func withPR(ctx context.Context, f *cmdutil.Factory, selector string, fn prFunc) error {
-	repo, err := f.BaseRepo()
-	if err != nil {
-		return err
-	}
 	client, err := f.APIClient()
 	if err != nil {
 		return err
 	}
-	pr, repo, err := resolvePR(ctx, f, client, repo, selector)
+	pr, repo, err := resolvePR(ctx, f, client, selector)
 	if err != nil {
 		return err
 	}

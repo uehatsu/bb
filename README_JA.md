@@ -190,7 +190,7 @@ Bitbucket リモート）のリポジトリを対象にします。`-R WORKSPACE
 | エージェント | スキルファイル | インストール先 | 使われ方 |
 |---|---|---|---|
 | [Claude Code](https://claude.com/claude-code) | `skills/claude_code/bitbucket/SKILL.md` | `~/.claude/skills/bitbucket/` | `/bitbucket`、または Bitbucket の話題で自動的に |
-| [Codex](https://openai.com/codex/) | `skills/codex/bitbucket/SKILL.md` | `~/.codex/skills/bitbucket/` | スキルの説明文に基づいて自動的に |
+| [Codex](https://openai.com/codex/) | `skills/codex/bitbucket/SKILL.md` | `~/.codex/skills/bitbucket/` | `$bitbucket`、またはスキルの説明文に基づいて自動的に |
 | [GitHub Copilot](https://docs.github.com/copilot) | `skills/copilot/bitbucket/SKILL.md` | `~/.copilot/skills/bitbucket/` | スキルの説明文に基づいて自動的に |
 
 ```sh
@@ -206,10 +206,11 @@ make install-copilot-skill      # GitHub Copilot のみ
 プロジェクト限定にしたい場合は、そのプロジェクトの `.claude/skills/bitbucket/`（Claude Code）
 または `.github/skills/bitbucket/`（Copilot）にコピーしてください。
 
-3 つの `SKILL.md` は**生成物**です。共通本文は `skills/bitbucket.body.md`、エージェント別の
-front matter は `skills/<agent>/bitbucket/frontmatter.md` にあります。これらを編集して
-`make skills` を実行し、結果をコミットしてください。生成物が古いままだと CI（`make check-skills`）が
-失敗します（`skills/` 配下に未コミットの編集があるときも失敗します）。
+3 つの `SKILL.md` は**生成物**です。共通の説明文と本文は `skills/bitbucket.description.txt` と
+`skills/bitbucket.body.md`、エージェント別の front matter は
+`skills/<agent>/bitbucket/frontmatter.md` にあります（`AGENT_NAME` と `SKILL_DESCRIPTION` が
+置換されます）。これらを編集して `make skills` を実行し、結果をコミットしてください。
+生成物が古いままだと CI（`make check-skills`）が失敗します。
 
 ## 開発
 
@@ -219,6 +220,7 @@ make test       # ユニットテスト（httptest ベース。git があれば�
 make lint       # golangci-lint が必要
 make docs       # docs/reference を再生成（コミット対象。古いままだと CI が失敗）
 make skills     # skills/*/bitbucket/SKILL.md を再生成（コミット対象。古いままだと CI が失敗）
+make check-docs check-skills   # 生成物を書き換えずに検査（CI と同じ）
 ```
 
 リリースのタグを打つ前に `CHANGELOG.md` の `Unreleased` を新バージョンの節に移してください。
