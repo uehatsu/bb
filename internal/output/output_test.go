@@ -15,6 +15,7 @@ func TestTableTSV(t *testing.T) {
 	tp.AddField("Fix bug", nil)
 	tp.EndRow()
 	tp.AddField("22", nil)
+	// CJK (multi-byte) sample: TSV output must pass it through untouched.
 	tp.AddField("日本語タイトル", nil)
 	tp.EndRow()
 	if err := tp.Render(); err != nil {
@@ -33,6 +34,7 @@ func TestTableTTYAligned(t *testing.T) {
 	tp.AddField("a", nil)
 	tp.EndRow()
 	tp.AddField("22", nil)
+	// CJK sample: two runes, but four columns wide on a terminal.
 	tp.AddField("日本", nil)
 	tp.EndRow()
 	_ = tp.Render()
@@ -49,6 +51,7 @@ func TestTruncate(t *testing.T) {
 	if Truncate("short", 10) != "short" {
 		t.Error("no truncation expected")
 	}
+	// CJK sample: truncation counts display width, not bytes.
 	if Truncate("日本語の長い文字列", 9) != "日本語..." {
 		t.Error(Truncate("日本語の長い文字列", 9))
 	}
@@ -121,6 +124,7 @@ func TestWriteLine(t *testing.T) {
 	if b.String() != "a\nb\n" {
 		t.Errorf("%q", b.String())
 	}
+	// CJK sample: two runes.
 	if RuneLen("日本") != 2 {
 		t.Error("RuneLen")
 	}

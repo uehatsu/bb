@@ -21,6 +21,7 @@ func TestBuildURL(t *testing.T) {
 		{Options{PullRequests: true}, "https://bitbucket.org/acme/widgets/pull-requests/"},
 		{Options{Pipelines: true}, "https://bitbucket.org/acme/widgets/pipelines"},
 		{Options{Commit: "abc1234"}, "https://bitbucket.org/acme/widgets/commits/abc1234"},
+		// CJK (multi-byte) path: must be percent-encoded.
 		{Options{Selector: "日本語/ファイル.txt"}, "https://bitbucket.org/acme/widgets/src/HEAD/%E6%97%A5%E6%9C%AC%E8%AA%9E/%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.txt"},
 	}
 	for _, c := range cases {

@@ -78,6 +78,7 @@ func TestWebURLs(t *testing.T) {
 	if got := NewPullRequestWebURL("acme", "widgets", "feat/x", "main", "Hi there"); got != "https://bitbucket.org/acme/widgets/pull-requests/new?dest=main&source=feat%2Fx&title=Hi+there" {
 		t.Error(got)
 	}
+	// CJK (multi-byte) branch name: must be percent-encoded.
 	if BranchWebURL("acme", "widgets", "feat/日本") != "https://bitbucket.org/acme/widgets/branch/feat/%E6%97%A5%E6%9C%AC" {
 		t.Error(BranchWebURL("acme", "widgets", "feat/日本"))
 	}

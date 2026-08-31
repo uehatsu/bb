@@ -1,73 +1,73 @@
-# MAGI 指摘（v0.1.2..HEAD 審議）対応プラン — v0.1.4
+# Plan for the MAGI findings (review of v0.1.2..HEAD) — v0.1.4
 
-作成日: 2026-08-26 / 対象: https://github.com/uehatsu/bb（HEAD `b275fed`、v0.1.3 リリース済み）
+Created: 2026-08-26 / Target: https://github.com/uehatsu/bb (HEAD `b275fed`, v0.1.3 released)
 
-## 0. 対応する指摘
+## 0. Findings to address
 
-| # | 指摘 | 出所 | 優先 |
+| # | Finding | Source | Priority |
 |---|---|---|---|
-| 1 | SKILL.md の「承認後に `--yes`」が一般化されすぎ。`--yes` を持つのは `pr merge` / `repo delete` / `branch delete` のみで、`pr decline` / `pipeline stop` / `repo edit --visibility` に付けると `unknown flag` | CASPER | 中 |
-| 2 | 3 つの SKILL.md（本文共通・frontmatter 差分）の同期が人力頼みで、CI に drift 検出が無い | BALTHASAR / CASPER | 中 |
-| 3 | 回帰テストに「グループコマンドを引数無しで実行 → ヘルプ・exit 0」「`--help` → exit 0」のケースが無い | BALTHASAR | 低 |
-| 4 | Claude Code 版 frontmatter の `user_invocable` / `trigger` は Claude Code が解釈するキーではない | CASPER | 低 |
-| 5 | Makefile: `cp` が既存 SKILL.md を無確認で上書き、`$(HOME)` 未クォート、`install-skill` が未使用エージェントの `~/.codex` `~/.copilot` も作る | MELCHIOR | 低 |
-| 6 | root（`bb bogus`）と group（`bb pr bogus`）で不明コマンド時の出力が不揃い（root は Usage 無し） | BALTHASAR | 低 |
-| 7 | Go 1.26 要件引き上げ・過去の変更がリリースノートに無い。同一修正の 3 連続コミット | BALTHASAR | 低 |
+| 1 | SKILL.md over-generalises "add `--yes` after approval". Only `pr merge` / `repo delete` / `branch delete` have `--yes`; adding it to `pr decline` / `pipeline stop` / `repo edit --visibility` fails with `unknown flag` | CASPER | Medium |
+| 2 | Keeping the three SKILL.md files (shared body, different frontmatter) in sync is manual, and CI has no drift detection | BALTHASAR / CASPER | Medium |
+| 3 | Regression tests lack the cases "run a group command with no arguments → help, exit 0" and "`--help` → exit 0" | BALTHASAR | Low |
+| 4 | `user_invocable` / `trigger` in the Claude Code frontmatter are not keys that Claude Code interprets | CASPER | Low |
+| 5 | Makefile: `cp` overwrites an existing SKILL.md without checking, `$(HOME)` is unquoted, and `install-skill` also creates `~/.codex` and `~/.copilot` for agents that are not in use | MELCHIOR | Low |
+| 6 | Unknown-command output differs between root (`bb bogus`) and groups (`bb pr bogus`) — root prints no Usage | BALTHASAR | Low |
+| 7 | The Go 1.26 requirement bump and past changes are missing from release notes. Three consecutive commits for the same fix | BALTHASAR | Low |
 
-## 1. 方針と非対象
+## 1. Approach and non-goals
 
-- **履歴の書き換えはしない**（#7 の squash）。`v0.1.3` タグ・`main` は公開済みで、rewrite は利用者の clone を壊す。代わりに **CHANGELOG.md** を導入して以後のリリースノートの正本とする。
-- SKILL.md は **生成物**にする（#2）。ソースは 1 本の本文 + エージェント別 frontmatter。生成物はコミットし続ける（`make install-*` と、リポジトリから直接コピーする利用者のため）。CI は「生成し直して差分が無いこと」を検査する（`docs/reference` と同じ方式）。
-- `pr decline` / `pipeline stop` に `--yes` を**追加しない**（MELCHIOR 警告 3 は認識した上で据え置き）。理由: どちらも取り消し可能（decline → 新 PR、stop → 再実行）で、gh の `pr close` / `run cancel` にも確認は無く、互換性を優先する。SKILL.md 側で「承認は必要だがフラグは無い」と正確に書く（#1）。
+- **No history rewriting** (the squash suggested in #7). The `v0.1.3` tag and `main` are public; a rewrite would break users' clones. Instead, introduce **CHANGELOG.md** as the source of truth for release notes from now on.
+- Make SKILL.md a **generated artifact** (#2). The sources are a single body plus per-agent frontmatter. The generated files stay committed (for `make install-*` and for users who copy them straight from the repository). CI checks that "regenerating produces no diff" (the same approach as `docs/reference`).
+- **Do not add** `--yes` to `pr decline` / `pipeline stop` (MELCHIOR warning 3 is acknowledged and deliberately left as-is). Rationale: both are reversible (decline → new PR, stop → rerun), and gh's `pr close` / `run cancel` have no confirmation either, so compatibility wins. SKILL.md states precisely that "approval is required but there is no flag" (#1).
 
-## 2. 変更内容
+## 2. Changes
 
-### Step 1: SKILL.md の生成方式（#1, #2, #4）
-- `skills/bitbucket.body.md` — 共通本文（現在の 3 ファイルの本文。`AGENT_NAME` プレースホルダ）
-- `skills/<agent>/bitbucket/frontmatter.md` — エージェント別 frontmatter（`claude_code` は `name` / `description` のみに整理し `user_invocable` / `trigger` を削除、`codex` は `metadata.short-description`、`copilot` は `license`）
-- `scripts/gen-skills.sh` — `frontmatter.md` + 本文（`AGENT_NAME` 置換）→ `skills/<agent>/bitbucket/SKILL.md`。POSIX sh のみ（Go 不要）。`AGENT_NAME` は frontmatter.md 先頭のコメント行 `<!-- agent: Claude Code -->` から取る
-- `make skills` で生成、`make check-skills` で「生成 → `git diff --exit-code -- skills/`」。CI（`ci.yml` の docs チェックと同じジョブ）に `make check-skills` を追加
-- 本文の修正（#1）: Ground rule 3 と Destructive-operation workflow を次のとおり正確化
-  - `--yes` を持つコマンドは **`pr merge` / `repo delete` / `branch delete` の 3 つだけ**。非対話環境では `repo delete` / `branch delete` は `--yes` が**必須**、`pr merge` は省略可（TTY でなければ確認プロンプトは出ない）
-  - `pr decline` / `pipeline stop` / `repo edit --visibility` は**承認を得てから、フラグ無しで**実行する（`--yes` を付けると `unknown flag` で失敗する）
-  - 「Destructive-operation workflow」の step 3 を「run the command (add `--yes` only where the command has it)」に変更
-- README / README_JA の Agent skills 節を「`skills/bitbucket.body.md` を編集して `make skills`」に更新
+### Step 1: Generating SKILL.md (#1, #2, #4)
+- `skills/bitbucket.body.md` — shared body (the body of the current three files, with an `AGENT_NAME` placeholder)
+- `skills/<agent>/bitbucket/frontmatter.md` — per-agent frontmatter (`claude_code` is trimmed to `name` / `description` only, dropping `user_invocable` / `trigger`; `codex` has `metadata.short-description`; `copilot` has `license`)
+- `scripts/gen-skills.sh` — `frontmatter.md` + body (with `AGENT_NAME` substituted) → `skills/<agent>/bitbucket/SKILL.md`. POSIX sh only (no Go required). `AGENT_NAME` is taken from the leading comment line `<!-- agent: Claude Code -->` in frontmatter.md
+- `make skills` generates; `make check-skills` does "generate → `git diff --exit-code -- skills/`". Add `make check-skills` to CI (the same job as the docs check in `ci.yml`)
+- Body fixes (#1): make Ground rule 3 and the Destructive-operation workflow precise:
+  - Only **three commands have `--yes`: `pr merge` / `repo delete` / `branch delete`**. In non-interactive environments `repo delete` / `branch delete` **require** `--yes`; `pr merge` may omit it (no confirmation prompt appears without a TTY)
+  - `pr decline` / `pipeline stop` / `repo edit --visibility` run **without a flag after obtaining approval** (adding `--yes` fails with `unknown flag`)
+  - Change step 3 of the "Destructive-operation workflow" to "run the command (add `--yes` only where the command has it)"
+- Update the Agent skills section of README / README_JA to "edit `skills/bitbucket.body.md` and run `make skills`"
 
-### Step 2: root と group の統一 + テスト（#3, #6）
-- `pkg/cmd/root/root.go`: root にも `Args: cobra.ArbitraryArgs` + `RunE: cmdutil.GroupRunE` を設定し、`bb bogus` も group と同じ `unknown command "bogus" for "bb"` + Usage + exit 1 にする。`bb`（引数無し）はヘルプ exit 0、`bb --version` / `bb --help` は従来どおり
-- `pkg/cmd/root/root_test.go` に追加:
-  - `TestGroupWithoutArgsShowsHelp`: 8 グループ + root を引数無しで実行 → `err == nil`、出力に各コマンドの `Short` を含む
+### Step 2: Unify root and groups + tests (#3, #6)
+- `pkg/cmd/root/root.go`: give the root `Args: cobra.ArbitraryArgs` + `RunE: cmdutil.GroupRunE` as well, so `bb bogus` behaves like the groups: `unknown command "bogus" for "bb"` + Usage + exit 1. `bb` (no arguments) shows help with exit 0; `bb --version` / `bb --help` are unchanged
+- Add to `pkg/cmd/root/root_test.go`:
+  - `TestGroupWithoutArgsShowsHelp`: run the 8 groups + root with no arguments → `err == nil` and the output contains each command's `Short`
   - `TestGroupHelpFlag`: `bb pr --help` → `err == nil`
-  - `TestUnknownSubcommandFails` に root ケース `{"bogus"}` を追加
-- `cmd/bb/main_test.go`: `execute(ctx, f, []string{"pr", "bogus"})` → exit 1、`[]string{"pr"}` → exit 0
+  - Add the root case `{"bogus"}` to `TestUnknownSubcommandFails`
+- `cmd/bb/main_test.go`: `execute(ctx, f, []string{"pr", "bogus"})` → exit 1, `[]string{"pr"}` → exit 0
 
-### Step 3: Makefile の安全化（#5）
-- 全ターゲットで `"$(HOME)"` をクォート
-- `install-<agent>-skill`: 既存の `SKILL.md` がリポジトリ版と異なる場合は `SKILL.md.bak` に退避してから上書きし、その旨を表示（`cmp -s` で判定）
-- `install-skill` は従来どおり 3 つすべて（README に「使わないエージェントのディレクトリも作られる。個別ターゲットを使えば作られない」と注記）
+### Step 3: Hardening the Makefile (#5)
+- Quote `"$(HOME)"` in every target
+- `install-<agent>-skill`: when the existing `SKILL.md` differs from the repository version, back it up to `SKILL.md.bak` before overwriting and say so (detected with `cmp -s`)
+- `install-skill` keeps installing all three (README notes that "directories for unused agents are created too; use the individual targets to avoid that")
 
-### Step 4: CHANGELOG（#7）
-- `CHANGELOG.md`（Keep a Changelog 形式）を追加。`0.1.0`〜`0.1.3` を遡って記載（0.1.1: PR URL / branch delete `--yes` / store 移行、0.1.2: pipeline 番号解決、0.1.3: 不明サブコマンド exit 1、`go install` に Go 1.26 が必要になった旨）。`Unreleased` に本プランの内容
-- `.goreleaser.yml` の `changelog` は既存のコミットベース生成のまま（CHANGELOG.md は人間向け正本）。README の Development 節に「リリース前に CHANGELOG.md を更新」を追記
+### Step 4: CHANGELOG (#7)
+- Add `CHANGELOG.md` (Keep a Changelog format). Backfill `0.1.0`–`0.1.3` (0.1.1: PR URL / `branch delete --yes` / store migration; 0.1.2: pipeline number resolution; 0.1.3: unknown subcommands exit 1, and the note that `go install` now needs Go 1.26). Put this plan's contents under `Unreleased`
+- Keep the existing commit-based `changelog` in `.goreleaser.yml` (CHANGELOG.md is the human-facing source of truth). Add "update CHANGELOG.md before a release" to the Development section of the README
 
-### Step 5: 検証・リリース
-- `go test ./...`、`golangci-lint run`、`make check-skills`、`make docs` の差分無しを**ローカルで確認してから**コミット
-- `make install-skill` で 3 箇所を更新し、Claude Code のスキル一覧に `bitbucket` が引き続き現れることを確認（#4 の frontmatter 変更の検証）
-- コミットは Step ごと（4 コミット）。`v0.1.4` タグは全 CI 緑を確認後に 1 回だけ打つ
+### Step 5: Verification and release
+- Confirm **locally, before committing**, that `go test ./...`, `golangci-lint run`, `make check-skills`, and `make docs` produce no diff
+- Run `make install-skill` to update all three locations and confirm that `bitbucket` still appears in Claude Code's skill list (verifies the frontmatter change from #4)
+- One commit per step (4 commits). Tag `v0.1.4` exactly once, after all CI jobs are green
 
-## 3. 完了条件
-- `bb pr decline --yes` のような誤用を SKILL.md が誘発しない（本文に対応コマンドが明記）
-- `make check-skills` が CI で動き、3 ファイルを個別に編集すると CI が落ちる
-- `bb`, `bb <group>`, `bb <group> --help` → exit 0 / `bb bogus`, `bb <group> bogus` → exit 1 がテストで固定
-- Makefile が既存のローカル編集を失わない
-- CHANGELOG.md に 0.1.0〜0.1.4 の履歴
+## 3. Completion criteria
+- SKILL.md no longer induces misuse such as `bb pr decline --yes` (the body names the commands that support it)
+- `make check-skills` runs in CI, and editing any of the three files individually makes CI fail
+- `bb`, `bb <group>`, `bb <group> --help` → exit 0 / `bb bogus`, `bb <group> bogus` → exit 1 are pinned by tests
+- The Makefile never loses existing local edits
+- CHANGELOG.md holds the history for 0.1.0–0.1.4
 
-## 4. リスク
-- root に `RunE` を持たせると cobra の `--version` 処理順が変わる可能性 → テストで `bb --version` の出力を固定
-- frontmatter から `user_invocable` / `trigger` を外すと `/bitbucket` が出なくなる可能性 → Step 5 で確認し、出なければ `name` だけで足りない証拠として戻す（Claude Code 公式のキーは `name` / `description` / `allowed-tools` / `disable-model-invocation`）
+## 4. Risks
+- Giving the root a `RunE` might change cobra's `--version` handling order → pin the output of `bb --version` in a test
+- Removing `user_invocable` / `trigger` from the frontmatter might make `/bitbucket` disappear → verify in Step 5 and, if it disappears, restore them as evidence that `name` alone is insufficient (Claude Code's official keys are `name` / `description` / `allowed-tools` / `disable-model-invocation`)
 
-## 5. 結果（2026-08-26）
-- プラン審議: 1 回目で三体 APPROVE（MELCHIOR 8 / BALTHASAR 8 / CASPER 8）。WARNINGS（AGENT_NAME は引数渡し、`git status --porcelain` で未追跡検出、"Did you mean" 提案、`.bak` 1 世代の注記、CHANGELOG のタグ検査）を実装に反映。
-- コミット: `9f15704`（Step 1）、`88ef5e7`（Step 2）、`55df9c5`（Step 3）、`a2784f4`（Step 4）。CI 全ジョブ成功。
-- `user_invocable` / `trigger` を外しても Claude Code のスキル一覧に `bitbucket` が表示されることを確認（Claude Code 2026-08 時点）。
-- v0.1.4 としてリリース。
+## 5. Results (2026-08-26)
+- Plan review: all three APPROVE in the first round (MELCHIOR 8 / BALTHASAR 8 / CASPER 8). The WARNINGS (pass AGENT_NAME as an argument, detect untracked files with `git status --porcelain`, "Did you mean" suggestions, note the single `.bak` generation, check the CHANGELOG for the tag) were folded into the implementation.
+- Commits: `9f15704` (Step 1), `88ef5e7` (Step 2), `55df9c5` (Step 3), `a2784f4` (Step 4). All CI jobs succeeded.
+- Confirmed that `bitbucket` still shows up in Claude Code's skill list after removing `user_invocable` / `trigger` (Claude Code as of 2026-08).
+- Released as v0.1.4.
